@@ -85,9 +85,30 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
 .mareas-legend-item.faded{opacity:.35}
 .area-header{display:flex;align-items:center;gap:8px;width:100%;padding:2px 0}
 .cp-tags{display:flex;flex-wrap:wrap;gap:3px;padding:3px 0 6px 20px;width:100%;border-bottom:1px solid var(--border)}
-.area-color-input{display:none;width:0;height:0;padding:0;border:0;opacity:0}
+
 .mareas-legend-dot{width:14px;height:14px;border-radius:3px;flex-shrink:0;transition:transform .15s}
 .mareas-legend-dot:hover{transform:scale(1.25)}
+.color-picker-popup{position:fixed;z-index:99999;background:#1a1e28;border:1px solid #2d3347;border-radius:10px;padding:12px;box-shadow:0 12px 40px rgba(0,0,0,.8);width:212px;box-sizing:border-box}
+.color-picker-swatches{display:grid;grid-template-columns:repeat(8,1fr);gap:5px;margin-bottom:10px;width:100%}
+.color-swatch{width:20px;height:20px;border-radius:4px;cursor:pointer;border:1px solid rgba(255,255,255,.08);transition:transform .1s,border-color .1s;box-sizing:border-box}
+.color-swatch:hover{transform:scale(1.2);border-color:rgba(255,255,255,.6)!important;z-index:1;position:relative}
+.color-swatch.selected{border:2px solid #fff!important;box-shadow:0 0 0 1px rgba(0,0,0,.4)}
+/* HSL editor */
+.color-picker-hsl{background:#0d0f14;border-radius:6px;padding:8px;margin-bottom:10px;display:flex;flex-direction:column;gap:6px}
+.hsl-row{display:flex;align-items:center;gap:6px}
+.hsl-label{font-family:'IBM Plex Mono',monospace;font-size:9px;color:#6b7694;width:10px;flex-shrink:0}
+.hsl-slider{flex:1;height:6px;border-radius:3px;cursor:pointer;-webkit-appearance:none;appearance:none;outline:none;background:var(--track-bg)}
+.hsl-slider::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:#fff;border:2px solid rgba(0,0,0,.3);cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.4)}
+.hsl-val{font-family:'IBM Plex Mono',monospace;font-size:9px;color:#94a3b8;width:24px;text-align:right}
+.color-hsl-preview{width:100%;height:28px;border-radius:5px;border:1px solid rgba(255,255,255,.1);margin-bottom:2px}
+/* Hex row */
+.color-picker-hex{display:flex;gap:6px;align-items:center}
+.color-picker-hex input{flex:1;background:#0d0f14;border:1px solid #2d3347;color:#e2e8f0;padding:5px 8px;border-radius:4px;font-family:'IBM Plex Mono',monospace;font-size:11px;outline:none}
+.color-picker-hex input:focus{border-color:var(--accent)}
+.color-picker-preview{width:28px;height:28px;border-radius:4px;border:1px solid rgba(255,255,255,.2);flex-shrink:0}
+.color-picker-eye{width:28px;height:28px;border-radius:4px;border:1px solid #2d3347;background:#0d0f14;color:#6b7694;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0;transition:all .15s}
+.color-picker-eye:hover{border-color:var(--accent);color:var(--accent);background:rgba(79,142,247,.1)}
+.color-picker-eye:active{transform:scale(.92)}
 .cp-tag{font-family:'IBM Plex Mono',monospace;font-size:9px;padding:1px 5px;border-radius:2px;border:1px solid rgba(255,255,255,0.18);color:#c8d4e8;background:rgba(255,255,255,0.06);white-space:nowrap}
 .cp-tag.new{border-color:#4ade80;color:#4ade80;background:rgba(74,222,128,0.08)}
 .cp-tag.removed{border-color:#f87171;color:#f87171;background:rgba(248,113,113,0.08);text-decoration:line-through}
@@ -636,39 +657,17 @@ function renderAreasLegend(sc, areaColors) {
 
     item.innerHTML = `
       <div class="area-header">
-        <div class="mareas-legend-dot" style="background:${color};cursor:pointer" title="Cambiar color"></div>
-        <input type="color" class="area-color-input" value="${color}" style="display:none">
+        <div class="mareas-legend-dot" style="background:${color};cursor:pointer" title="Cambiar color" data-area="${area}"></div>
         <span class="mareas-legend-name">${area}</span>
         <span class="mareas-legend-count">${cps.length}</span>
       </div>
-      <div class="cp-tags" id="cptags-${area.replace(/[^a-z0-9]/gi,'_')}">${cpTagsHtml}</div>
+      <div class="cp-tags">${cpTagsHtml}</div>
     `;
-    // Color picker anchored near the dot
     const dot = item.querySelector('.mareas-legend-dot');
-    const picker = item.querySelector('.area-color-input');
     dot.onclick = (e) => {
       e.stopPropagation();
-      // Position the hidden input near the dot before clicking
-      const rect = dot.getBoundingClientRect();
-      picker.style.position = 'fixed';
-      picker.style.left = rect.left + 'px';
-      picker.style.top = (rect.bottom + 4) + 'px';
-      picker.style.width = '0';
-      picker.style.height = '0';
-      picker.style.opacity = '0';
-      picker.style.display = 'block';
-      picker.click();
+      openColorPicker(dot, area);
     };
-    picker.oninput = (e) => {
-      const newColor = e.target.value;
-      areaColorCache[activeCentro][area] = newColor;
-      dot.style.background = newColor;
-      // Update map layers
-      mapLayers2.forEach(l => {
-        if (l._cpArea === area) l.setStyle({fillColor:newColor, color:newColor});
-      });
-    };
-    picker.onchange = () => { picker.style.display = 'none'; };
     // click on header (not dot) toggles visibility
     item.querySelector('.mareas-legend-name').onclick = (e) => { e.stopPropagation(); toggleArea(area, item); };
     item.querySelector('.mareas-legend-count').onclick = (e) => { e.stopPropagation(); toggleArea(area, item); };
@@ -868,6 +867,208 @@ function parseCSV(text) {
 
 function isoDate(d) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+// ── CUSTOM COLOR PICKER ──────────────────────────────────────────────────────
+const PICKER_PALETTE = [
+  '#f97316','#fb923c','#fbbf24','#facc15','#a3e635','#84cc16','#4ade80','#34d399',
+  '#2dd4bf','#22d3ee','#38bdf8','#60a5fa','#818cf8','#a78bfa','#c084fc','#e879f9',
+  '#f472b6','#fb7185','#f87171','#ef4444','#dc2626','#b91c1c','#ffffff','#94a3b8',
+  '#64748b','#475569','#334155','#1e293b','#0f172a','#000000','#06b6d4','#3b82f6'
+];
+
+let activePickerDot = null, activePickerArea = null, pickerPopup = null;
+let pickerH = 0, pickerS = 100, pickerL = 50;
+
+// ── Color conversion helpers ──────────────────────────────────────────────────
+function hexToHsl(hex) {
+  let r = parseInt(hex.slice(1,3),16)/255;
+  let g = parseInt(hex.slice(3,5),16)/255;
+  let b = parseInt(hex.slice(5,7),16)/255;
+  const max = Math.max(r,g,b), min = Math.min(r,g,b);
+  let h, s, l = (max+min)/2;
+  if (max===min) { h=s=0; }
+  else {
+    const d = max-min;
+    s = l>0.5 ? d/(2-max-min) : d/(max+min);
+    switch(max){ case r: h=((g-b)/d+(g<b?6:0))/6; break; case g: h=((b-r)/d+2)/6; break; case b: h=((r-g)/d+4)/6; break; }
+  }
+  return [Math.round(h*360), Math.round(s*100), Math.round(l*100)];
+}
+function hslToHex(h,s,l) {
+  s/=100; l/=100;
+  const a=s*Math.min(l,1-l);
+  const f=n=>{ const k=(n+h/30)%12; const c=l-a*Math.max(Math.min(k-3,9-k,1),-1); return Math.round(255*c).toString(16).padStart(2,'0'); };
+  return `#${f(0)}${f(8)}${f(4)}`;
+}
+function isValidHex(v){ return /^#[0-9a-f]{6}$/i.test(v); }
+
+function openColorPicker(dot, area) {
+  closeColorPicker();
+  activePickerDot = dot; activePickerArea = area;
+  const currentColor = areaColorCache[activeCentro]?.[area] || dot.style.background || '#4f8ef7';
+  const hex = currentColor.startsWith('#') ? currentColor : rgbToHex(currentColor);
+  [pickerH, pickerS, pickerL] = hexToHsl(hex);
+
+  pickerPopup = document.createElement('div');
+  pickerPopup.className = 'color-picker-popup';
+  pickerPopup.onclick = e => e.stopPropagation();
+
+  // ── Swatches ──────────────────────────────────────────────────────────────
+  const swatches = document.createElement('div');
+  swatches.className = 'color-picker-swatches';
+  PICKER_PALETTE.forEach(c => {
+    const s = document.createElement('div');
+    s.className = 'color-swatch';
+    s.style.background = c;
+    if (c.toLowerCase() === hex.toLowerCase()) s.classList.add('selected');
+    s.onclick = (e) => {
+      e.stopPropagation();
+      const [h,sv,lv] = hexToHsl(c);
+      pickerH=h; pickerS=sv; pickerL=lv;
+      syncFromHSL();
+    };
+    swatches.appendChild(s);
+  });
+  pickerPopup.appendChild(swatches);
+
+  // ── HSL Editor ───────────────────────────────────────────────────────────
+  const hslBox = document.createElement('div');
+  hslBox.className = 'color-picker-hsl';
+
+  const hslPreview = document.createElement('div');
+  hslPreview.className = 'color-hsl-preview';
+  hslPreview.style.background = hex;
+  hslBox.appendChild(hslPreview);
+
+  function makeSlider(label, min, max, getter, setter, trackFn) {
+    const row = document.createElement('div');
+    row.className = 'hsl-row';
+    const lbl = document.createElement('span');
+    lbl.className = 'hsl-label'; lbl.textContent = label;
+    const sl = document.createElement('input');
+    sl.type = 'range'; sl.className = 'hsl-slider';
+    sl.min = min; sl.max = max; sl.value = getter();
+    const val = document.createElement('span');
+    val.className = 'hsl-val'; val.textContent = getter();
+    sl.style.setProperty('--track-bg', trackFn());
+    sl.oninput = (e) => {
+      setter(Number(e.target.value));
+      val.textContent = getter();
+      sl.style.setProperty('--track-bg', trackFn());
+      syncFromHSL();
+    };
+    row.appendChild(lbl); row.appendChild(sl); row.appendChild(val);
+    row._slider = sl; row._val = val; row._trackFn = trackFn;
+    return row;
+  }
+
+  const hRow = makeSlider('H', 0, 360, ()=>pickerH, v=>pickerH=v,
+    ()=>`linear-gradient(to right,hsl(0,100%,50%),hsl(30,100%,50%),hsl(60,100%,50%),hsl(90,100%,50%),hsl(120,100%,50%),hsl(150,100%,50%),hsl(180,100%,50%),hsl(210,100%,50%),hsl(240,100%,50%),hsl(270,100%,50%),hsl(300,100%,50%),hsl(330,100%,50%),hsl(360,100%,50%))`);
+  const sRow = makeSlider('S', 0, 100, ()=>pickerS, v=>pickerS=v,
+    ()=>`linear-gradient(to right,hsl(${pickerH},0%,${pickerL}%),hsl(${pickerH},100%,${pickerL}%))`);
+  const lRow = makeSlider('L', 0, 100, ()=>pickerL, v=>pickerL=v,
+    ()=>`linear-gradient(to right,hsl(${pickerH},${pickerS}%,0%),hsl(${pickerH},${pickerS}%,50%),hsl(${pickerH},${pickerS}%,100%))`);
+
+  hslBox.appendChild(hRow); hslBox.appendChild(sRow); hslBox.appendChild(lRow);
+  pickerPopup.appendChild(hslBox);
+
+  // ── Hex row ───────────────────────────────────────────────────────────────
+  const hexRow = document.createElement('div');
+  hexRow.className = 'color-picker-hex';
+  const preview = document.createElement('div');
+  preview.className = 'color-picker-preview';
+  preview.style.background = hex;
+  const hexInput = document.createElement('input');
+  hexInput.value = hex; hexInput.maxLength = 7;
+  hexInput.onclick = e => e.stopPropagation();
+  hexInput.oninput = (e) => {
+    const v = e.target.value;
+    if (isValidHex(v)) {
+      const [h,s,l] = hexToHsl(v);
+      pickerH=h; pickerS=s; pickerL=l;
+      syncFromHSL(true); // skip updating hexInput itself
+    }
+  };
+  hexInput.onkeydown = (e) => { if (e.key==='Enter') closeColorPicker(); e.stopPropagation(); };
+  hexRow.appendChild(preview);
+  hexRow.appendChild(hexInput);
+
+  // Eyedropper
+  if (window.EyeDropper) {
+    const eyeBtn = document.createElement('button');
+    eyeBtn.className = 'color-picker-eye';
+    eyeBtn.title = 'Gotero';
+    eyeBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l4 4-9.5 9.5a2 2 0 0 1-2.83 0l-1.17-1.17a2 2 0 0 1 0-2.83L12 2z"/><path d="M15 5l4 4"/><path d="M2 22l3.5-3.5"/><circle cx="3.5" cy="20.5" r="1.5"/></svg>`;
+    eyeBtn.onclick = async (e) => {
+      e.stopPropagation();
+      pickerPopup.style.opacity = '0';
+      try {
+        const result = await new EyeDropper().open();
+        const picked = result.sRGBHex;
+        const [h,s,l] = hexToHsl(picked);
+        pickerH=h; pickerS=s; pickerL=l;
+        syncFromHSL();
+      } catch(err) {}
+      finally { pickerPopup.style.opacity='1'; }
+    };
+    hexRow.appendChild(eyeBtn);
+  }
+  pickerPopup.appendChild(hexRow);
+
+  // ── syncFromHSL: update everything from pickerH/S/L ───────────────────────
+  function syncFromHSL(skipHexInput=false) {
+    const newHex = hslToHex(pickerH, pickerS, pickerL);
+    hslPreview.style.background = newHex;
+    preview.style.background = newHex;
+    if (!skipHexInput) hexInput.value = newHex;
+    // Update slider tracks
+    [hRow,sRow,lRow].forEach(r => {
+      r._slider.value = r._slider === hRow._slider ? pickerH : r._slider === sRow._slider ? pickerS : pickerL;
+      r._val.textContent = r._slider.value;
+      r._slider.style.setProperty('--track-bg', r._trackFn());
+    });
+    // Mark selected swatch
+    pickerPopup.querySelectorAll('.color-swatch').forEach(s => {
+      const sc = s.style.backgroundColor;
+      s.classList.toggle('selected', rgbToHex(sc)===newHex);
+    });
+    applyColor(newHex);
+  }
+
+  // ── Position popup ────────────────────────────────────────────────────────
+  document.body.appendChild(pickerPopup);
+  const rect = dot.getBoundingClientRect();
+  const pw = pickerPopup.offsetWidth, ph = pickerPopup.offsetHeight;
+  let left = rect.left, top = rect.bottom + 6;
+  if (left + pw > window.innerWidth - 8) left = window.innerWidth - pw - 8;
+  if (top + ph > window.innerHeight - 8) top = rect.top - ph - 6;
+  pickerPopup.style.left = left + 'px';
+  pickerPopup.style.top = top + 'px';
+
+  setTimeout(() => document.addEventListener('click', closeColorPicker, {once:true}), 0);
+}
+
+function rgbToHex(rgb) {
+  if (!rgb || rgb.startsWith('#')) return rgb || '#000000';
+  const m = rgb.match(/\d+/g);
+  if (!m || m.length < 3) return '#000000';
+  return '#' + m.slice(0,3).map(v => parseInt(v).toString(16).padStart(2,'0')).join('');
+}
+
+function applyColor(newColor) {
+  if (!activePickerDot || !activePickerArea) return;
+  if (!areaColorCache[activeCentro]) areaColorCache[activeCentro] = {};
+  areaColorCache[activeCentro][activePickerArea] = newColor;
+  activePickerDot.style.background = newColor;
+  mapLayers2.forEach(l => {
+    if (l._cpArea === activePickerArea) l.setStyle({fillColor:newColor, color:newColor});
+  });
+}
+
+function closeColorPicker() {
+  if (pickerPopup) { pickerPopup.remove(); pickerPopup = null; }
+  activePickerDot = null; activePickerArea = null;
 }
 </script>
 </body>
