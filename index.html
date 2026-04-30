@@ -346,9 +346,16 @@ window.addEventListener('DOMContentLoaded', () => {
   // Load JSONBin in background — don't block render
   loadFromJSONBin().then(loaded => {
     if (loaded) {
+      // Limpiar estado del mapa igual que confirmApplyCsv para que los datos nuevos se rendericen bien
+      clearMap1(); clearMap2();
+      if (labelGroup1.group) { try { leafletMap.removeLayer(labelGroup1.group); } catch(_){} labelGroup1 = {}; }
+      if (labelGroup2.group) { try { leafletMap2.removeLayer(labelGroup2.group); } catch(_){} labelGroup2 = {}; }
+      areaColorCache = {};
+      geojsonCache = {};
+      Object.keys(CENTRO_COLORS_DYNAMIC).forEach(k => delete CENTRO_COLORS_DYNAMIC[k]);
       buildCentroButtons();
       const keys = Object.keys(ALL_SCENARIOS).sort();
-      setCentro(keys[0] || firstCentro);
+      setTimeout(() => { setCentro(keys[0] || firstCentro); }, 80);
       showToast('✓ Datos cargados desde JSONBin');
     }
   }).catch(() => {});
