@@ -13,6 +13,24 @@
 *{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#0d0f14;--bg2:#13161e;--bg3:#1a1e28;--border:#242836;--text:#e2e8f0;--muted:#6b7694;--accent:#4f8ef7}
 body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:13px;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+.app-content{display:flex;flex-direction:column;flex:1;overflow:hidden}
+
+/* LEFT NAV SIDEBAR */
+.left-nav{width:200px;background:#1a1d24;border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden;z-index:10}
+.left-nav-logo{padding:14px 16px 10px;border-bottom:1px solid var(--border);flex-shrink:0}
+.left-nav-logo-text{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;color:var(--accent);letter-spacing:.06em;white-space:nowrap}
+.left-nav-section{padding:14px 12px 6px;font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;color:var(--muted);letter-spacing:.1em;text-transform:uppercase}
+.left-nav-item{display:flex;align-items:center;gap:10px;padding:9px 14px;margin:1px 8px;border-radius:6px;cursor:pointer;transition:all .15s;font-family:'IBM Plex Sans',sans-serif;font-size:13px;color:var(--muted);user-select:none;border:1px solid transparent}
+.left-nav-item:hover{background:rgba(255,255,255,.05);color:var(--text)}
+.left-nav-item.active{background:rgba(79,142,247,.12);color:#fff;border-color:rgba(79,142,247,.25)}
+.left-nav-item.active .left-nav-icon{color:var(--accent)}
+.left-nav-icon{font-size:16px;flex-shrink:0;width:18px;text-align:center;color:var(--muted)}
+.left-nav-item.active .left-nav-icon{color:var(--accent)}
+.left-nav-divider{height:1px;background:var(--border);margin:8px 12px}
+.left-nav-bottom{margin-top:auto;padding:10px 8px;border-top:1px solid var(--border)}
+
+/* APP SHELL */
+.app-shell{display:flex;flex:1;overflow:hidden}
 
 /* TOPBAR */
 .topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 20px;display:flex;align-items:center;gap:0;flex-shrink:0;height:48px}
@@ -185,6 +203,25 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
     </div>
   </nav>
 </div>
+
+<!-- APP SHELL: left nav + main content -->
+<div class="app-shell">
+
+<!-- LEFT NAV SIDEBAR -->
+<div class="left-nav">
+  <div class="left-nav-section">Vista</div>
+  <div class="left-nav-item active" id="navCentro" onclick="setViewMode('centros')">
+    <span class="left-nav-icon">⬡</span>
+    <span>Centro</span>
+  </div>
+  <div class="left-nav-item" id="navAreas" onclick="setViewMode('areas')">
+    <span class="left-nav-icon">⬢</span>
+    <span>Áreas</span>
+  </div>
+</div>
+
+<!-- MAIN CONTENT AREA -->
+<div class="app-content">
 <div class="csv-toast" id="csvToast"></div>
 <div class="loading-overlay" id="loadingOverlay">
   <div class="loading-spinner"></div>
@@ -228,11 +265,7 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
       <div class="centro-dropdown-list" id="centroDropdownList"></div>
     </div>
   </div>
-  <div class="view-toggle" id="viewToggle">
-    <button class="vtoggle-btn active" id="vbtn-centros" onclick="setViewMode('centros')">⬡ CENTRO</button>
-    <button class="vtoggle-btn" id="vbtn-areas" onclick="setViewMode('areas')">⬢ ÁREAS</button>
-  </div>
-  <div class="scenario-chips" id="scenarioChips"></div>
+  <div class="scenario-chips" id="scenarioChips" style="display:none"></div>
 </div>
 
 <!-- UNIFIED MAP -->
@@ -250,13 +283,17 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
   </div>
   <!-- RIGHT SIDEBAR: areas -->
   <div class="mareas-sidebar" id="sidebarRight" style="display:none">
-    <div class="sidebar-header">ÁREAS — <span id="mareasCentroTitle">—</span></div>
+    <div class="sidebar-header">ÁREAS — <span id="mareasCentroTitle">—</span> <span id="mareasAreaCount" style="margin-left:8px;font-size:9px;padding:2px 7px;border-radius:3px;background:rgba(79,142,247,.15);border:1px solid rgba(79,142,247,.3);color:var(--accent)"></span></div>
+    <div id="areasScenarioNav" style="display:flex;flex-wrap:wrap;gap:4px;padding:8px 10px;border-bottom:1px solid var(--border);flex-shrink:0"></div>
     <div class="areas-search-wrap">
       <input type="text" id="areasSearchInput" class="areas-search-input" placeholder="🔍 Buscar área o CP…" oninput="filterAreas(this.value)">
     </div>
     <div class="mareas-legend" id="mareasLegend"></div>
   </div>
 </div>
+
+</div><!-- /app-content -->
+</div><!-- /app-shell -->
 
 <script>
 // ── DATA ────────────────────────────────────────────────────────────────────
@@ -469,34 +506,35 @@ function setCentro(c) {
 function buildScenarioChips() {
   const scenarios = ALL_SCENARIOS[activeCentro] || [];
   const container = document.getElementById('scenarioChips');
+  const navAreas = document.getElementById('areasScenarioNav');
   container.innerHTML = '';
+  if (navAreas) navAreas.innerHTML = '';
   if (scenarios.length <= 1) return;
-  const lbl = document.createElement('span');
-  lbl.className = 'centro-label';
-  lbl.textContent = 'ESCENARIO:';
-  container.appendChild(lbl);
   function fmtShort(iso) {
     if (!iso) return '…';
     const [y,m,d] = iso.split('-');
     return `${d}/${m}/${y.slice(2)}`;
   }
   scenarios.forEach((sc, i) => {
-    const chip = document.createElement('button');
-    chip.className = 'sc-chip' + (i === activeScIdx ? ' active' : '');
-    // Show date range: "dd/mm – dd/mm" or "→ dd/mm" or "dd/mm →"
-    let label;
-    if (!sc.from && !sc.to) label = '2026';
-    else if (!sc.from) label = `→ ${fmtShort(sc.to)}`;
-    else if (!sc.to) label = `${fmtShort(sc.from)} →`;
-    else label = `${fmtShort(sc.from)} – ${fmtShort(sc.to)}`;
-    chip.textContent = label;
-    chip.title = sc.label;
-    if (i === activeScIdx) {
-      chip.style.background = CENTRO_COLORS[activeCentro];
-      chip.style.borderColor = CENTRO_COLORS[activeCentro];
+    function makeChip() {
+      const chip = document.createElement('button');
+      chip.className = 'sc-chip' + (i === activeScIdx ? ' active' : '');
+      let label;
+      if (!sc.from && !sc.to) label = '2026';
+      else if (!sc.from) label = `→ ${fmtShort(sc.to)}`;
+      else if (!sc.to) label = `${fmtShort(sc.from)} →`;
+      else label = `${fmtShort(sc.from)} – ${fmtShort(sc.to)}`;
+      chip.textContent = label;
+      chip.title = sc.label;
+      if (i === activeScIdx) {
+        chip.style.background = CENTRO_COLORS[activeCentro];
+        chip.style.borderColor = CENTRO_COLORS[activeCentro];
+      }
+      chip.onclick = () => setScenario(i);
+      return chip;
     }
-    chip.onclick = () => setScenario(i);
-    container.appendChild(chip);
+    container.appendChild(makeChip());
+    if (navAreas) navAreas.appendChild(makeChip());
   });
 }
 
@@ -572,7 +610,7 @@ function renderSidebar() {
       <div class="tl-card">
         ${isCurrent ? '<span class="tl-today">Hoy</span>' : ''}
         <div class="tl-label">${sc.label}</div>
-        <div class="tl-sub">${Object.keys(sc.cp_areas).length} CPs · ${sc.areas.length} áreas</div>
+        <div class="tl-sub">${Object.keys(sc.cp_areas).length} CPs · <span style="color:var(--text);font-weight:600">${sc.areas.length} áreas</span></div>
         ${badgeHtml ? `<div style="margin-top:6px">${badgeHtml}</div>` : ''}
         ${detailHtml}
       </div>
@@ -828,9 +866,12 @@ async function renderMapAreas() {
 
 function renderAreasLegend(sc, areaColors) {
   const legend = document.getElementById('mareasLegend');
+  // Update areas count badge in sidebar header
+  const badge = document.getElementById('mareasAreaCount');
+  if (badge) badge.textContent = `${sc.areas.length} áreas`;
   // Clear search
   const si = document.getElementById('areasSearchInput'); if(si) si.value = '';
-  legend.innerHTML = `<div class="mareas-legend-title">ÁREAS (${sc.areas.length})</div>`;
+  legend.innerHTML = '';
 
   // Group CPs by area
   const areaCps = {};
@@ -930,9 +971,9 @@ function toggleArea(area, item) {
 // ── VIEW MODE TOGGLE ─────────────────────────────────────────────────────────
 function setViewMode(mode) {
   activeTab = mode === 'areas' ? 'mapareas' : 'mapa';
-  // Toggle buttons
-  document.getElementById('vbtn-centros').classList.toggle('active', mode === 'centros');
-  document.getElementById('vbtn-areas').classList.toggle('active', mode === 'areas');
+  // Toggle left nav items
+  document.getElementById('navCentro').classList.toggle('active', mode === 'centros');
+  document.getElementById('navAreas').classList.toggle('active', mode === 'areas');
   // Show/hide sidebars
   document.getElementById('sidebarLeft').style.display = mode === 'centros' ? 'flex' : 'none';
   document.getElementById('sidebarRight').style.display = mode === 'areas' ? 'flex' : 'none';
