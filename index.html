@@ -169,6 +169,16 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
 .sc-cp-diff{display:flex;flex-wrap:wrap;gap:3px;margin-top:3px}
 
 .cp-map-label{font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:700;text-align:center;white-space:nowrap;text-shadow:0 0 3px rgba(0,0,0,0.9),0 0 6px rgba(0,0,0,0.7),1px 1px 0 rgba(0,0,0,0.8),-1px -1px 0 rgba(0,0,0,0.8);pointer-events:none;opacity:.9;display:none}
+
+/* MAP OVERLAY LEGEND */
+.map-overlay-legend{position:absolute;bottom:24px;left:16px;z-index:1000;background:rgba(13,15,20,0.92);border:1px solid rgba(255,255,255,0.12);border-radius:10px;padding:10px 14px;max-width:260px;max-height:calc(100% - 60px);overflow-y:auto;backdrop-filter:blur(6px);box-shadow:0 4px 20px rgba(0,0,0,0.6);display:none;pointer-events:auto}
+.map-overlay-legend.visible{display:block}
+.map-overlay-legend-title{font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;color:rgba(107,118,148,0.9);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.08)}
+.map-overlay-legend-row{display:flex;align-items:center;gap:8px;padding:2px 0;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#c8d4e8;white-space:nowrap;overflow:hidden}
+.map-overlay-legend-swatch{width:12px;height:12px;border-radius:2px;flex-shrink:0}
+.map-overlay-legend-name{flex:1;overflow:hidden;text-overflow:ellipsis}
+.map-overlay-legend-toggle{position:absolute;bottom:24px;left:16px;z-index:1001;background:rgba(13,15,20,0.88);border:1px solid rgba(255,255,255,0.12);border-radius:6px;padding:5px 10px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6b7694;cursor:pointer;display:none;backdrop-filter:blur(4px);transition:color .15s,border-color .15s}
+.map-overlay-legend-toggle:hover{color:#e2e8f0;border-color:rgba(255,255,255,0.28)}
 .csv-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:10000;align-items:center;justify-content:center}
 .csv-modal-overlay.open{display:flex}
 .csv-modal-box{background:#13161e;border:1px solid #2d3347;border-radius:12px;width:460px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.7)}
@@ -275,6 +285,11 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
     <div id="map"></div>
     <div class="loading-msg" id="loadingMsg" style="display:none">Cargando GeoJSON…</div>
     <div class="legend" id="legend"></div>
+    <!-- OVERLAY LEGEND (vista Áreas) -->
+    <div class="map-overlay-legend" id="mapOverlayLegend">
+      <div class="map-overlay-legend-title" id="mapOverlayLegendTitle">ÁREAS</div>
+      <div id="mapOverlayLegendRows"></div>
+    </div>
   </div>
   <!-- RIGHT SIDEBAR: scenarios (centros mode) -->
   <div class="sidebar" id="sidebarLeft">
@@ -669,18 +684,23 @@ async function getGeoJSON(cp) {
 
 // ── CP LABEL GROUPS ──────────────────────────────────────────────────────────
 let labelGroup1 = {}, labelGroup2 = {};
+let cpLabelMarkers2 = {}; // cp -> marker, for areas view
 
-function addCpLabels(cpLayerMap, map, groupRef, fallbackColor) {
+function addCpLabels(cpLayerMap, map, groupRef, fallbackColor, cpAreaMap) {
   // Clear old labels
   if (groupRef && groupRef.group) map.removeLayer(groupRef.group);
   const group = L.layerGroup().addTo(map);
   groupRef.group = group;
+  if (cpAreaMap) cpLabelMarkers2 = {};
 
   Object.entries(cpLayerMap).forEach(([cp, lyr]) => {
     try {
+      const area = cpAreaMap ? cpAreaMap[cp] : null;
+      // Skip if area is hidden
+      if (area && hiddenAreas.has(area)) return;
       const center = lyr.getBounds().getCenter();
       const color = fallbackColor || '#fff';
-      const label = L.marker(center, {
+      const marker = L.marker(center, {
         icon: L.divIcon({
           className: '',
           html: `<div class="cp-map-label" style="color:${color}">${cp}</div>`,
@@ -690,7 +710,8 @@ function addCpLabels(cpLayerMap, map, groupRef, fallbackColor) {
         interactive: false,
         zIndexOffset: 500
       });
-      group.addLayer(label);
+      group.addLayer(marker);
+      if (cpAreaMap) cpLabelMarkers2[cp] = marker;
     } catch(e) {}
   });
 
@@ -844,7 +865,7 @@ async function renderMapAreas() {
           layer._cpArea = area;
           layer.on({
             mouseover(e){ e.target.setStyle({weight:2.5, opacity:1, fillOpacity:0.85}); e.target.bringToFront(); },
-            mouseout(e){ e.target.setStyle({color:color, weight:1.5, fillColor:color, fillOpacity: hiddenAreas.has(area)?0:0.65, opacity:0.75}); },
+            mouseout(e){ e.target.setStyle({color:color, weight:1.5, fillColor:color, fillOpacity: hiddenAreas.has(area)?0:0.65, opacity: hiddenAreas.has(area)?0:0.75}); },
             click(e){ L.popup().setLatLng(e.latlng)
               .setContent(makePopupArea(cp, area, color, ALL_SCENARIOS[activeCentro][activeScIdx]))
               .openOn(leafletMap2); }
@@ -861,7 +882,7 @@ async function renderMapAreas() {
   if (bounds.length) leafletMap2.fitBounds(bounds.reduce((a,b)=>a.extend(b)), {padding:[20,20]});
   renderAreasLegend(sc, areaColors);
   // build per-cp color map for labels
-  addCpLabels(cpToLayer2, leafletMap, labelGroup2, '#ffffff', null);
+  addCpLabels(cpToLayer2, leafletMap, labelGroup2, '#ffffff', cpAreas);
 }
 
 function renderAreasLegend(sc, areaColors) {
@@ -872,6 +893,24 @@ function renderAreasLegend(sc, areaColors) {
   // Clear search
   const si = document.getElementById('areasSearchInput'); if(si) si.value = '';
   legend.innerHTML = '';
+
+  // ── MAP OVERLAY LEGEND ───────────────────────────────────────────────────
+  const overlayEl = document.getElementById('mapOverlayLegend');
+  const overlayRows = document.getElementById('mapOverlayLegendRows');
+  const overlayTitle = document.getElementById('mapOverlayLegendTitle');
+  if (overlayEl && overlayRows) {
+    overlayRows.innerHTML = '';
+    if (overlayTitle) overlayTitle.textContent = `${activeCentro.toUpperCase()} · ${sc.areas.length} áreas`;
+    sc.areas.forEach(area => {
+      const color = areaColors[area] || '#4a5068';
+      const row = document.createElement('div');
+      row.className = 'map-overlay-legend-row';
+      row.dataset.area = area;
+      row.innerHTML = `<div class="map-overlay-legend-swatch" style="background:${color}"></div><span class="map-overlay-legend-name">${area}</span>`;
+      overlayRows.appendChild(row);
+    });
+    overlayEl.classList.add('visible');
+  }
 
   // Group CPs by area
   const areaCps = {};
@@ -964,8 +1003,19 @@ function toggleArea(area, item) {
     item.classList.add('faded');
   }
   mapLayers2.forEach(l => {
-    if (l._cpArea === area) l.setStyle({fillOpacity: hiddenAreas.has(area) ? 0 : 0.7});
+    if (l._cpArea === area) l.setStyle({fillOpacity: hiddenAreas.has(area) ? 0 : 0.7, opacity: hiddenAreas.has(area) ? 0 : 0.75});
   });
+  // Toggle CP label markers for this area
+  const isHidden = hiddenAreas.has(area);
+  Object.entries(cpLabelMarkers2).forEach(([cp, marker]) => {
+    if (cpToLayer2[cp]?._cpArea === area) {
+      if (isHidden) { if (labelGroup2.group) labelGroup2.group.removeLayer(marker); }
+      else { if (labelGroup2.group) labelGroup2.group.addLayer(marker); }
+    }
+  });
+  // Sync overlay legend: hide row if area is hidden
+  const overlayRow = document.querySelector(`#mapOverlayLegendRows .map-overlay-legend-row[data-area="${area}"]`);
+  if (overlayRow) overlayRow.style.display = hiddenAreas.has(area) ? 'none' : 'flex';
 }
 
 // ── VIEW MODE TOGGLE ─────────────────────────────────────────────────────────
@@ -977,6 +1027,9 @@ function setViewMode(mode) {
   // Show/hide sidebars
   document.getElementById('sidebarLeft').style.display = mode === 'centros' ? 'flex' : 'none';
   document.getElementById('sidebarRight').style.display = mode === 'areas' ? 'flex' : 'none';
+  // Hide overlay legend when switching to centros mode
+  const overlayEl = document.getElementById('mapOverlayLegend');
+  if (overlayEl) overlayEl.classList.toggle('visible', mode === 'areas');
   // Clear ALL layers from both modes before re-rendering
   clearMap1();
   clearMap2();
@@ -1394,6 +1447,9 @@ function applyColor(newColor) {
   mapLayers2.forEach(l => {
     if (l._cpArea === activePickerArea) l.setStyle({fillColor:newColor, color:newColor});
   });
+  // Sync overlay legend swatch
+  const overlayRow = document.querySelector(`#mapOverlayLegendRows .map-overlay-legend-row[data-area="${activePickerArea}"]`);
+  if (overlayRow) { const sw = overlayRow.querySelector('.map-overlay-legend-swatch'); if(sw) sw.style.background = newColor; }
 }
 
 function closeColorPicker() {
