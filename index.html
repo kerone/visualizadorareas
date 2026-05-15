@@ -68,6 +68,50 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
 .centro-option-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
 .centro-label{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.05em;margin-right:4px}
 .scenario-chips{display:flex;gap:4px;align-items:center;margin-left:auto}
+
+/* ── CP / ÁREA GLOBAL SEARCH ─────────────────────────────────────────────── */
+.cp-search-wrap{position:relative;display:flex;align-items:center;margin-left:10px}
+.cp-search-inner{position:relative;display:flex;align-items:center}
+.cp-search-icon{position:absolute;left:10px;color:var(--muted);font-size:14px;pointer-events:none;z-index:1;display:flex;align-items:center}
+.cp-search-icon svg{display:block}
+.cp-search-input{background:#2a2f3e;border:1px solid #3a4055;color:#e2e8f0;font-family:'IBM Plex Sans',sans-serif;font-size:12px;padding:6px 32px 6px 34px;border-radius:7px;outline:none;width:210px;transition:border-color .18s,box-shadow .18s,width .2s;letter-spacing:.01em}
+.cp-search-input:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(79,142,247,.18);width:260px;background:#2f3547}
+.cp-search-input::placeholder{color:#4a5568;font-style:italic}
+.cp-search-clear{position:absolute;right:8px;background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:0;line-height:1;display:none;align-items:center;transition:color .12s}
+.cp-search-clear:hover{color:var(--text)}
+/* Dropdown */
+.cp-search-dropdown{position:absolute;top:calc(100% + 6px);left:0;z-index:9999;background:#141720;border:1px solid #2a2f42;border-radius:10px;box-shadow:0 12px 40px rgba(0,0,0,.75),0 2px 8px rgba(0,0,0,.4);min-width:320px;max-height:320px;overflow-y:auto;display:none;scrollbar-width:thin;scrollbar-color:#2a2f42 transparent}
+.cp-search-dropdown::-webkit-scrollbar{width:4px}
+.cp-search-dropdown::-webkit-scrollbar-track{background:transparent}
+.cp-search-dropdown::-webkit-scrollbar-thumb{background:#2a2f42;border-radius:2px}
+/* Section header inside dropdown */
+.cp-search-section{padding:6px 12px 4px;font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;letter-spacing:.1em;color:#3d4768;text-transform:uppercase;border-top:1px solid #1e2333;margin-top:2px}
+.cp-search-section:first-child{border-top:none;margin-top:0}
+/* Items */
+.cp-search-item{padding:7px 12px 7px 14px;font-family:'IBM Plex Sans',sans-serif;font-size:12px;color:#8892b0;cursor:pointer;display:flex;align-items:center;gap:9px;transition:background .1s,color .1s;user-select:none}
+.cp-search-item:hover,.cp-search-item.selected{background:rgba(79,142,247,.1);color:var(--text)}
+.cp-search-item.selected{background:rgba(79,142,247,.15)}
+/* Centro color dot */
+.cp-search-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;margin-top:1px}
+/* Main label (CP number or area name) */
+.cp-search-label{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;color:#cdd6f0;min-width:58px;letter-spacing:.02em}
+.cp-search-label em{font-style:normal;color:#fff;text-decoration:underline;text-decoration-color:rgba(79,142,247,.6);text-underline-offset:2px}
+/* Type pill: CP or ÁREA */
+.cp-search-pill{font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;letter-spacing:.06em;padding:2px 6px;border-radius:3px;flex-shrink:0}
+.cp-search-pill.cp{background:rgba(79,142,247,.15);color:#7ba8f5;border:1px solid rgba(79,142,247,.25)}
+.cp-search-pill.area{background:rgba(250,204,21,.1);color:#c9a726;border:1px solid rgba(250,204,21,.2)}
+/* Secondary line */
+.cp-search-sub{font-size:10px;color:#4a5270;font-family:'IBM Plex Mono',monospace;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cp-search-sub strong{color:#6b7aa0;font-weight:600}
+/* Area badge inside a CP result */
+.cp-search-area-badge{font-size:10px;padding:1px 6px;border-radius:3px;background:rgba(255,255,255,.06);color:#7b849e;border:1px solid rgba(255,255,255,.08);white-space:nowrap;flex-shrink:0;font-family:'IBM Plex Mono',monospace}
+/* Today badge */
+.cp-search-today{font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;background:rgba(79,142,247,.25);color:#7bb3ff;border:1px solid rgba(79,142,247,.35);letter-spacing:.04em;flex-shrink:0;font-family:'IBM Plex Mono',monospace}
+/* No results */
+.cp-search-no-results{padding:16px 14px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#3d4768;text-align:center;letter-spacing:.03em}
+/* Highlight flash on map */
+@keyframes cpFlash{0%{opacity:1}25%{opacity:.2}50%{opacity:1}75%{opacity:.2}100%{opacity:1}}
+.cp-highlight-flash{animation:cpFlash .5s ease 3}
 .sc-chip{padding:3px 10px;border-radius:3px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:10px;cursor:pointer;transition:all .12s;font-weight:500}
 .sc-chip:hover{color:var(--text);border-color:var(--muted)}
 .sc-chip.active{color:#fff;border-color:transparent}
@@ -122,11 +166,16 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
 .mareas-legend-name{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;transition:color .15s}
 .mareas-legend-name:hover{color:#fff}
 .mareas-legend-count{font-size:9px;color:var(--muted)}
+
+/* Area visibility toggle */
+.area-toggle{position:relative;width:32px;height:18px;flex-shrink:0;cursor:pointer}
+.area-toggle input{opacity:0;width:0;height:0;position:absolute}
+.area-toggle-track{position:absolute;inset:0;border-radius:9px;background:#2a2f3e;border:1px solid #3a4055;transition:background .2s,border-color .2s}
+.area-toggle input:checked ~ .area-toggle-track{background:#3a7d3a;border-color:#4a9e4a}
+.area-toggle-thumb{position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;background:#5a6280;transition:transform .2s,background .2s;pointer-events:none}
+.area-toggle input:checked ~ .area-toggle-thumb{transform:translateX(14px);background:#fff}
 .mareas-no-areas{padding:20px 14px;font-size:11px;color:var(--muted);font-family:'IBM Plex Mono',monospace}
-.areas-search-wrap{padding:6px 10px;border-bottom:1px solid var(--border);flex-shrink:0}
-.areas-search-input{width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:11px;padding:5px 10px;border-radius:5px;outline:none;box-sizing:border-box;transition:border-color .15s}
-.areas-search-input:focus{border-color:var(--accent)}
-.areas-search-input::placeholder{color:#4a5568}
+
 .mareas-legend-item.hidden-search{display:none}
 .mareas-legend-item{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin:0 10px 8px;font-family:'IBM Plex Mono',monospace;font-size:11px;transition:border-color .2s;flex-wrap:wrap;display:block}
 .mareas-legend-item:hover{border-color:#3d4768}
@@ -275,6 +324,29 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
       <div class="centro-dropdown-list" id="centroDropdownList"></div>
     </div>
   </div>
+  <!-- CP / ÁREA GLOBAL SEARCH -->
+  <div class="cp-search-wrap" id="cpSearchWrap">
+    <div class="cp-search-inner">
+      <span class="cp-search-icon">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="22" y2="22"/></svg>
+      </span>
+      <input type="text" class="cp-search-input" id="cpSearchInput"
+        placeholder="Buscar CP o área…"
+        maxlength="40"
+        oninput="onCpSearchInput(this.value)"
+        onkeydown="onCpSearchKeydown(event)"
+        onclick="event.stopPropagation()"
+        autocomplete="off">
+      <button class="cp-search-clear" id="cpSearchClear" onclick="clearCpSearch()" title="Limpiar">✕</button>
+    </div>
+    <div class="cp-search-dropdown" id="cpSearchDropdown"></div>
+  </div>
+  <!-- RESET ZOOM BUTTON (visible only when view is locked) -->
+  <button id="resetZoomBtn" onclick="resetMapView()"
+    title="Volver a ver todo el centro"
+    style="display:none;padding:0 10px;height:32px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;cursor:pointer;border-radius:5px;transition:all .15s;white-space:nowrap;display:none;align-items:center;gap:5px;letter-spacing:.03em">
+    ⊙ reset zoom
+  </button>
   <div class="scenario-chips" id="scenarioChips" style="display:none"></div>
 </div>
 
@@ -298,11 +370,18 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
   </div>
   <!-- RIGHT SIDEBAR: areas -->
   <div class="mareas-sidebar" id="sidebarRight" style="display:none">
-    <div class="sidebar-header">ÁREAS — <span id="mareasCentroTitle">—</span> <span id="mareasAreaCount" style="margin-left:8px;font-size:9px;padding:2px 7px;border-radius:3px;background:rgba(79,142,247,.15);border:1px solid rgba(79,142,247,.3);color:var(--accent)"></span></div>
-    <div id="areasScenarioNav" style="display:flex;flex-wrap:wrap;gap:4px;padding:8px 10px;border-bottom:1px solid var(--border);flex-shrink:0"></div>
-    <div class="areas-search-wrap">
-      <input type="text" id="areasSearchInput" class="areas-search-input" placeholder="🔍 Buscar área o CP…" oninput="filterAreas(this.value)">
+    <div class="sidebar-header" style="display:flex;align-items:center;gap:8px">
+      <span>ÁREAS — <span id="mareasCentroTitle">—</span></span>
+      <span id="mareasAreaCount" style="margin-left:2px;font-size:9px;padding:2px 7px;border-radius:3px;background:rgba(79,142,247,.15);border:1px solid rgba(79,142,247,.3);color:var(--accent)"></span>
+      <span style="flex:1"></span>
+      <span style="font-size:9px;color:var(--muted);letter-spacing:.04em;margin-right:4px">TODAS</span>
+      <label class="area-toggle" id="masterAreaToggle" title="Activar/desactivar todas las áreas">
+        <input type="checkbox" id="masterAreaCb" checked onchange="toggleAllAreas(this.checked)">
+        <span class="area-toggle-track"></span>
+        <span class="area-toggle-thumb"></span>
+      </label>
     </div>
+    <div id="areasScenarioNav" style="display:flex;flex-wrap:wrap;gap:4px;padding:8px 10px;border-bottom:1px solid var(--border);flex-shrink:0"></div>
     <div class="mareas-legend" id="mareasLegend"></div>
   </div>
 </div>
@@ -486,6 +565,7 @@ function selectCentroOption(c) {
 function setCentro(c) {
   activeCentro = c;
   activeScIdx = 0;
+  setMapViewLocked(false); // new centro → always fit to its bounds
   // update centro buttons
   // Update dropdown label + color
   const lbl = document.getElementById('centroDropdownLabel');
@@ -641,6 +721,14 @@ function initMaps() {
   leafletMap = L.map('map', {zoomControl:true, attributionControl:false}).setView([39.5, -3], 6);
   L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{attribution:'© Google',maxZoom:18}).addTo(leafletMap);
   leafletMap2 = leafletMap; // same map for both modes
+
+  // Lock view when user pans or zooms manually (originalEvent present = user gesture)
+  leafletMap.on('movestart', (e) => {
+    if (e.originalEvent) setMapViewLocked(true);
+  });
+  leafletMap.on('zoomstart', (e) => {
+    if (e.originalEvent) setMapViewLocked(true);
+  });
 }
 
 function getAreaColors(centro, areas) {
@@ -731,6 +819,24 @@ function addCpLabels(cpLayerMap, map, groupRef, fallbackColor, cpAreaMap) {
 let mapLayers1 = [], mapLayers2 = [];
 let cpToLayer1 = {}, cpToLayer2 = {};
 
+// ── MAP VIEW LOCK ─────────────────────────────────────────────────────────────
+// When true, renderMap/renderMapAreas skip fitBounds and preserve the current view.
+// Set to true when the user pans/zooms manually or selects an area/CP.
+// Reset to false only when changing centro.
+let _mapViewLocked = false;
+
+function setMapViewLocked(val) {
+  _mapViewLocked = val;
+  const btn = document.getElementById('resetZoomBtn');
+  if (btn) btn.style.display = val ? 'flex' : 'none';
+}
+
+function resetMapView() {
+  setMapViewLocked(false);
+  if (activeTab === 'mapa') renderMap();
+  else renderMapAreas();
+}
+
 
 function clearMap1() {
   mapLayers1.forEach(l => { try { leafletMap.removeLayer(l); } catch{} });
@@ -816,7 +922,7 @@ async function renderMap() {
   }
 
   document.getElementById('loadingMsg').style.display = 'none';
-  if (bounds.length) leafletMap.fitBounds(bounds.reduce((a,b)=>a.extend(b)), {padding:[20,20]});
+  if (bounds.length && !_mapViewLocked) leafletMap.fitBounds(bounds.reduce((a,b)=>a.extend(b)), {padding:[20,20]});
   renderLegendCentro(sc);
   addCpLabels(cpToLayer1, leafletMap, labelGroup1, '#ffffff', null);
 }
@@ -837,6 +943,8 @@ async function renderMapAreas() {
 
   clearMap2();
   hiddenAreas = new Set();
+  const masterCb = document.getElementById('masterAreaCb');
+  if (masterCb) { masterCb.checked = true; masterCb.indeterminate = false; }
 
   const cpAreas = sc.cp_areas;
   const areaColors = getAreaColors(activeCentro, sc.areas);
@@ -879,7 +987,7 @@ async function renderMapAreas() {
     });
   }
 
-  if (bounds.length) leafletMap2.fitBounds(bounds.reduce((a,b)=>a.extend(b)), {padding:[20,20]});
+  if (bounds.length && !_mapViewLocked) leafletMap2.fitBounds(bounds.reduce((a,b)=>a.extend(b)), {padding:[20,20]});
   renderAreasLegend(sc, areaColors);
   // build per-cp color map for labels
   addCpLabels(cpToLayer2, leafletMap, labelGroup2, '#ffffff', cpAreas);
@@ -890,8 +998,6 @@ function renderAreasLegend(sc, areaColors) {
   // Update areas count badge in sidebar header
   const badge = document.getElementById('mareasAreaCount');
   if (badge) badge.textContent = `${sc.areas.length} áreas`;
-  // Clear search
-  const si = document.getElementById('areasSearchInput'); if(si) si.value = '';
   legend.innerHTML = '';
 
   // ── MAP OVERLAY LEGEND ───────────────────────────────────────────────────
@@ -925,6 +1031,7 @@ function renderAreasLegend(sc, areaColors) {
     const cps = areaCps[area] || [];
     const item = document.createElement('div');
     item.className = 'mareas-legend-item';
+    item.dataset.area = area;
 
     const cpTagsHtml = cps.map(cp =>
       `<span class="cp-tag">${cp}</span>`
@@ -935,7 +1042,12 @@ function renderAreasLegend(sc, areaColors) {
       <div class="area-header">
         <div class="mareas-legend-dot" style="background:${color};cursor:pointer" title="Cambiar color" data-area="${area}"></div>
         <span class="mareas-legend-name">${area}</span>
-        <span class="mareas-legend-count">${cps.length}</span>
+        <span class="mareas-legend-count" style="margin-right:4px">${cps.length} CPs</span>
+        <label class="area-toggle" title="Mostrar/ocultar área">
+          <input type="checkbox" class="area-toggle-cb" checked>
+          <span class="area-toggle-track"></span>
+          <span class="area-toggle-thumb"></span>
+        </label>
       </div>
       <div class="cp-tags">${cpTagsHtml}</div>
     `;
@@ -947,11 +1059,15 @@ function renderAreasLegend(sc, areaColors) {
       e.stopPropagation();
       const bounds = [];
       mapLayers2.forEach(l => { if (l._cpArea === area) { try { bounds.push(l.getBounds()); } catch(_){} } });
-      if (bounds.length) leafletMap.fitBounds(bounds.reduce((a,b) => a.extend(b)), {padding:[40,40], maxZoom:13});
+      if (bounds.length) {
+        setMapViewLocked(true);
+        leafletMap.fitBounds(bounds.reduce((a,b) => a.extend(b)), {padding:[40,40], maxZoom:13});
+      }
     };
 
-    // Click count → toggle visibility (keep existing)
-    item.querySelector('.mareas-legend-count').onclick = (e) => { e.stopPropagation(); toggleArea(area, item); };
+    // Toggle switch → toggle visibility
+    const cb = item.querySelector('.area-toggle-cb');
+    cb.addEventListener('change', (e) => { e.stopPropagation(); toggleArea(area, item, cb.checked); });
 
     // Click CP tag → zoom to that specific CP
     item.querySelectorAll('.cp-tag').forEach(tag => {
@@ -962,6 +1078,7 @@ function renderAreasLegend(sc, areaColors) {
         const lyr = cpToLayer2[cp];
         if (lyr) {
           try {
+            setMapViewLocked(true);
             leafletMap.fitBounds(lyr.getBounds(), {padding:[60,60], maxZoom:14});
             // Brief flash highlight
             const origStyle = {fillOpacity: hiddenAreas.has(area) ? 0 : 0.65};
@@ -994,18 +1111,43 @@ function filterAreas(q) {
   });
 }
 
-function toggleArea(area, item) {
-  if (hiddenAreas.has(area)) {
+function toggleAllAreas(visible) {
+  const sc = ALL_SCENARIOS[activeCentro]?.[activeScIdx];
+  if (!sc) return;
+  sc.areas.forEach(area => {
+    const item = document.querySelector(`#mareasLegend .mareas-legend-item[data-area="${area}"]`);
+    if (item) toggleArea(area, item, visible);
+  });
+}
+
+function syncMasterToggle() {
+  const cb = document.getElementById('masterAreaCb');
+  if (!cb) return;
+  const sc = ALL_SCENARIOS[activeCentro]?.[activeScIdx];
+  if (!sc) return;
+  const allHidden = sc.areas.every(a => hiddenAreas.has(a));
+  const allVisible = sc.areas.every(a => !hiddenAreas.has(a));
+  cb.checked = !allHidden;
+  cb.indeterminate = !allHidden && !allVisible;
+}
+
+function toggleArea(area, item, visible) {
+  if (visible === undefined) visible = hiddenAreas.has(area);
+
+  if (visible) {
     hiddenAreas.delete(area);
     item.classList.remove('faded');
   } else {
     hiddenAreas.add(area);
     item.classList.add('faded');
   }
+
+  const cb = item.querySelector('.area-toggle-cb');
+  if (cb) cb.checked = visible;
+
   mapLayers2.forEach(l => {
     if (l._cpArea === area) l.setStyle({fillOpacity: hiddenAreas.has(area) ? 0 : 0.7, opacity: hiddenAreas.has(area) ? 0 : 0.75});
   });
-  // Toggle CP label markers for this area
   const isHidden = hiddenAreas.has(area);
   Object.entries(cpLabelMarkers2).forEach(([cp, marker]) => {
     if (cpToLayer2[cp]?._cpArea === area) {
@@ -1013,9 +1155,10 @@ function toggleArea(area, item) {
       else { if (labelGroup2.group) labelGroup2.group.addLayer(marker); }
     }
   });
-  // Sync overlay legend: hide row if area is hidden
   const overlayRow = document.querySelector(`#mapOverlayLegendRows .map-overlay-legend-row[data-area="${area}"]`);
   if (overlayRow) overlayRow.style.display = hiddenAreas.has(area) ? 'none' : 'flex';
+
+  syncMasterToggle();
 }
 
 // ── VIEW MODE TOGGLE ─────────────────────────────────────────────────────────
@@ -1456,6 +1599,419 @@ function closeColorPicker() {
   if (pickerPopup) { pickerPopup.remove(); pickerPopup = null; }
   activePickerDot = null; activePickerArea = null;
 }
+
+// ── CP / ÁREA GLOBAL SEARCH ───────────────────────────────────────────────────
+
+let _cpSearchResults = [];
+let _cpSearchSelectedIdx = -1;
+
+/**
+ * Dado un centro y sus escenarios, devuelve el índice del escenario relevante:
+ * 1) El que cubre hoy (from <= hoy <= to)
+ * 2) Si ninguno cubre hoy → el de mayor índice (último)
+ */
+function bestScenarioIdx(scenarios) {
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  for (let i = scenarios.length - 1; i >= 0; i--) {
+    const sc = scenarios[i];
+    const fr = sc.from ? new Date(sc.from) : null;
+    const to = sc.to   ? new Date(sc.to)   : null;
+    if ((!fr || fr <= today) && (!to || to >= today)) return i;
+  }
+  return scenarios.length - 1; // fallback: último
+}
+
+/**
+ * Resalta la parte del texto que coincide con la query (case-insensitive).
+ * Devuelve HTML con <em> alrededor del match.
+ */
+function highlightMatch(text, q) {
+  if (!q) return text;
+  const idx = text.toLowerCase().indexOf(q.toLowerCase());
+  if (idx < 0) return text;
+  return text.slice(0, idx)
+    + `<em>${text.slice(idx, idx + q.length)}</em>`
+    + text.slice(idx + q.length);
+}
+
+/**
+ * Para un CP o área encontrado en varios escenarios de un centro, elige el más relevante:
+ * 1) El que cubre hoy (from <= hoy <= to)
+ * 2) El próximo en el futuro (from > hoy, el de menor from)
+ * 3) El último por índice (más reciente histórico)
+ */
+function bestScenarioForMatch(matches) {
+  // matches: [{ scIdx, sc }, ...]
+  const today = new Date(); today.setHours(0,0,0,0);
+  // 1) Cubre hoy
+  for (const m of matches) {
+    const fr = m.sc.from ? new Date(m.sc.from) : null;
+    const to = m.sc.to   ? new Date(m.sc.to)   : null;
+    if ((!fr || fr <= today) && (!to || to >= today)) return m;
+  }
+  // 2) Futuro más próximo
+  const futures = matches.filter(m => m.sc.from && new Date(m.sc.from) > today);
+  if (futures.length) {
+    futures.sort((a,b) => new Date(a.sc.from) - new Date(b.sc.from));
+    return futures[0];
+  }
+  // 3) Último por índice
+  return matches[matches.length - 1];
+}
+
+/**
+ * Busca CPs y áreas en ALL_SCENARIOS recorriendo TODOS los escenarios de cada centro.
+ * Elige el escenario más relevante para cada match: hoy > futuro próximo > último.
+ * Resultados: { type:'cp'|'area', cp?, area, centro, scIdx, scLabel, isToday, cpCount? }
+ */
+function findSearchResults(query) {
+  const q = query.trim();
+  if (q.length < 2) return [];
+
+  const isNumeric = /^\d+$/.test(q);
+  const cpResults  = [];
+  const areaResults = [];
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  Object.entries(ALL_SCENARIOS).forEach(([centro, scenarios]) => {
+    if (isNumeric) {
+      // Recopilar todos los escenarios donde aparece cada CP que coincide
+      const cpMatches = {}; // cp -> [{ scIdx, sc }]
+      scenarios.forEach((sc, scIdx) => {
+        Object.entries(sc.cp_areas || {}).forEach(([cp, area]) => {
+          if (!cp.startsWith(q)) return;
+          if (!cpMatches[cp]) cpMatches[cp] = [];
+          cpMatches[cp].push({ scIdx, sc, area });
+        });
+      });
+      Object.entries(cpMatches).forEach(([cp, matches]) => {
+        const best = bestScenarioForMatch(matches);
+        const sc = best.sc;
+        const fr = sc.from ? new Date(sc.from) : null;
+        const to = sc.to   ? new Date(sc.to)   : null;
+        const isToday = (!fr || fr <= today) && (!to || to >= today);
+        cpResults.push({ type:'cp', cp, area: best.area, centro, scIdx: best.scIdx, scLabel: sc.label, isToday });
+      });
+    } else {
+      // Recopilar todos los escenarios donde aparece cada área que coincide
+      const areaMatches = {}; // area -> [{ scIdx, sc, cpCount }]
+      scenarios.forEach((sc, scIdx) => {
+        const cp_areas = sc.cp_areas || {};
+        const seenAreas = new Set();
+        Object.entries(cp_areas).forEach(([, area]) => {
+          if (!area.toLowerCase().includes(q.toLowerCase())) return;
+          if (seenAreas.has(area)) return;
+          seenAreas.add(area);
+          const cpCount = Object.values(cp_areas).filter(a => a === area).length;
+          if (!areaMatches[area]) areaMatches[area] = [];
+          areaMatches[area].push({ scIdx, sc, cpCount });
+        });
+      });
+      Object.entries(areaMatches).forEach(([area, matches]) => {
+        const best = bestScenarioForMatch(matches);
+        const sc = best.sc;
+        const fr = sc.from ? new Date(sc.from) : null;
+        const to = sc.to   ? new Date(sc.to)   : null;
+        const isToday = (!fr || fr <= today) && (!to || to >= today);
+        areaResults.push({ type:'area', area, centro, scIdx: best.scIdx, scLabel: sc.label, isToday, cpCount: best.cpCount });
+      });
+    }
+  });
+
+  if (isNumeric) {
+    // Sort CPs: exact match first, then numeric
+    cpResults.sort((a, b) => {
+      if (a.cp === q && b.cp !== q) return -1;
+      if (b.cp === q && a.cp !== q) return 1;
+      return a.cp.localeCompare(b.cp);
+    });
+    return cpResults.slice(0, 12);
+  } else {
+    // Sort areas: today-active first, then alphabetical
+    areaResults.sort((a, b) => {
+      if (a.isToday && !b.isToday) return -1;
+      if (b.isToday && !a.isToday) return 1;
+      return a.area.localeCompare(b.area);
+    });
+    return areaResults.slice(0, 12);
+  }
+}
+
+// (legacy alias, no longer used internally but kept for safety)
+function bestScenarioIdx(scenarios) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  for (let i = scenarios.length - 1; i >= 0; i--) {
+    const sc = scenarios[i];
+    const fr = sc.from ? new Date(sc.from) : null;
+    const to = sc.to   ? new Date(sc.to)   : null;
+    if ((!fr || fr <= today) && (!to || to >= today)) return i;
+  }
+  return scenarios.length - 1;
+}
+
+function clearCpSearch() {
+  document.getElementById('cpSearchInput').value = '';
+  document.getElementById('cpSearchDropdown').style.display = 'none';
+  document.getElementById('cpSearchClear').style.display = 'none';
+  _cpSearchResults = [];
+  _cpSearchSelectedIdx = -1;
+}
+
+function onCpSearchInput(val) {
+  const q = val.trim();
+  const dropdown = document.getElementById('cpSearchDropdown');
+  const clearBtn = document.getElementById('cpSearchClear');
+  _cpSearchSelectedIdx = -1;
+
+  clearBtn.style.display = q.length > 0 ? 'flex' : 'none';
+
+  if (q.length < 2) {
+    dropdown.style.display = 'none';
+    _cpSearchResults = [];
+    return;
+  }
+
+  _cpSearchResults = findSearchResults(q);
+
+  if (_cpSearchResults.length === 0) {
+    dropdown.innerHTML = `<div class="cp-search-no-results">Sin resultados para "<strong style="color:#5a6280">${q}</strong>"</div>`;
+    dropdown.style.display = 'block';
+    setupDropdownOutsideClose();
+    return;
+  }
+
+  dropdown.innerHTML = '';
+
+  // Separate into CP and ÁREA groups
+  const cpItems   = _cpSearchResults.filter(r => r.type === 'cp');
+  const areaItems = _cpSearchResults.filter(r => r.type === 'area');
+
+  function renderItem(r, globalIdx) {
+    const item = document.createElement('div');
+    item.className = 'cp-search-item';
+    item.dataset.idx = globalIdx;
+    const color = CENTRO_COLORS[r.centro] || '#fff';
+
+    if (r.type === 'cp') {
+      item.innerHTML = `
+        <span class="cp-search-dot" style="background:${color}"></span>
+        <span class="cp-search-label">${highlightMatch(r.cp, q)}</span>
+        <span class="cp-search-pill cp">CP</span>
+        <span class="cp-search-area-badge">${r.area}</span>
+        <span class="cp-search-sub" style="margin-left:auto"><strong>${r.centro.toUpperCase()}</strong> · ${r.scLabel}</span>
+        ${r.isToday ? '<span class="cp-search-today">HOY</span>' : ''}
+      `;
+    } else {
+      item.innerHTML = `
+        <span class="cp-search-dot" style="background:${color}"></span>
+        <span class="cp-search-label" style="min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${highlightMatch(r.area, q)}</span>
+        <span class="cp-search-pill area">ÁREA</span>
+        <span class="cp-search-sub"><strong>${r.centro.toUpperCase()}</strong> · ${r.cpCount} CPs</span>
+        ${r.isToday ? '<span class="cp-search-today">HOY</span>' : ''}
+      `;
+    }
+
+    item.onmousedown = (e) => { e.preventDefault(); selectSearchResult(globalIdx); };
+    return item;
+  }
+
+  if (cpItems.length > 0) {
+    const sec = document.createElement('div');
+    sec.className = 'cp-search-section';
+    sec.textContent = 'Códigos postales';
+    dropdown.appendChild(sec);
+    cpItems.forEach((r, _) => {
+      const gi = _cpSearchResults.indexOf(r);
+      dropdown.appendChild(renderItem(r, gi));
+    });
+  }
+
+  if (areaItems.length > 0) {
+    const sec = document.createElement('div');
+    sec.className = 'cp-search-section';
+    sec.textContent = 'Áreas';
+    dropdown.appendChild(sec);
+    areaItems.forEach((r) => {
+      const gi = _cpSearchResults.indexOf(r);
+      dropdown.appendChild(renderItem(r, gi));
+    });
+  }
+
+  dropdown.style.display = 'block';
+  setupDropdownOutsideClose();
+}
+
+function setupDropdownOutsideClose() {
+  function _outside(e) {
+    const wrap = document.getElementById('cpSearchWrap');
+    if (wrap && !wrap.contains(e.target)) {
+      document.getElementById('cpSearchDropdown').style.display = 'none';
+      document.removeEventListener('click', _outside);
+    }
+  }
+  setTimeout(() => document.addEventListener('click', _outside), 0);
+}
+
+function onCpSearchKeydown(e) {
+  const dropdown = document.getElementById('cpSearchDropdown');
+  if (dropdown.style.display === 'none') return;
+  const items = dropdown.querySelectorAll('.cp-search-item');
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    _cpSearchSelectedIdx = Math.min(_cpSearchSelectedIdx + 1, _cpSearchResults.length - 1);
+    highlightCpDropdownItem();
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    _cpSearchSelectedIdx = Math.max(_cpSearchSelectedIdx - 1, 0);
+    highlightCpDropdownItem();
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    const idx = _cpSearchSelectedIdx >= 0 ? _cpSearchSelectedIdx : 0;
+    if (_cpSearchResults[idx]) selectSearchResult(idx);
+  } else if (e.key === 'Escape') {
+    dropdown.style.display = 'none';
+    document.getElementById('cpSearchInput').blur();
+  }
+}
+
+function highlightCpDropdownItem() {
+  const items = document.querySelectorAll('#cpSearchDropdown .cp-search-item');
+  items.forEach((el, i) => {
+    el.classList.toggle('selected', i === _cpSearchSelectedIdx);
+  });
+  // Scroll selected into view
+  if (items[_cpSearchSelectedIdx]) {
+    items[_cpSearchSelectedIdx].scrollIntoView({block:'nearest'});
+  }
+}
+
+async function selectSearchResult(idx) {
+  const r = _cpSearchResults[idx];
+  if (!r) return;
+
+  // Close dropdown + clear input
+  document.getElementById('cpSearchDropdown').style.display = 'none';
+  document.getElementById('cpSearchInput').value = '';
+  document.getElementById('cpSearchClear').style.display = 'none';
+
+  // Navigate to the right centro + scenario
+  const needCentroChange = r.centro !== activeCentro;
+  if (needCentroChange) {
+    activeCentro = r.centro;
+    setMapViewLocked(false); // new centro → reset zoom
+    const lbl = document.getElementById('centroDropdownLabel');
+    const dd  = document.getElementById('centroDropdown');
+    if (lbl) lbl.textContent = r.centro.toUpperCase();
+    if (dd) {
+      const color = CENTRO_COLORS[r.centro];
+      dd.style.borderColor = color;
+      dd.style.boxShadow = `0 0 0 1px ${color}44`;
+    }
+    document.querySelectorAll('.centro-option').forEach(el =>
+      el.classList.toggle('selected', el.dataset.value === r.centro));
+    document.getElementById('centroTitle').textContent = r.centro.toUpperCase();
+    document.getElementById('mareasCentroTitle').textContent = r.centro.toUpperCase();
+  }
+
+  if (r.scIdx !== activeScIdx || needCentroChange) {
+    activeScIdx = r.scIdx;
+    buildScenarioChips();
+    renderSidebar();
+  }
+
+  // Render map and flash
+  if (r.type === 'cp') {
+    if (activeTab === 'mapa') {
+      await renderMap();
+      flashCp(r.cp, cpToLayer1, leafletMap);
+    } else {
+      await renderMapAreas();
+      flashCp(r.cp, cpToLayer2, leafletMap2);
+    }
+  } else {
+    // type === 'area': switch to áreas tab, zoom to all CPs in the area
+    if (activeTab !== 'mapareas') {
+      // Switch tab programmatically
+      setViewMode('areas');
+      await renderMapAreas();
+    } else {
+      await renderMapAreas();
+    }
+    flashArea(r.area);
+  }
+}
+
+function flashArea(area) {
+  const sc = ALL_SCENARIOS[activeCentro]?.[activeScIdx];
+  if (!sc) return;
+
+  // Collect bounds of all layers in this area
+  const bounds = [];
+  mapLayers2.forEach(l => {
+    if (l._cpArea === area) {
+      try { bounds.push(l.getBounds()); } catch(_){}
+    }
+  });
+  if (!bounds.length) return;
+
+  setMapViewLocked(true);
+  leafletMap2.fitBounds(bounds.reduce((a,b) => a.extend(b)), {padding:[50,50], maxZoom:13});
+
+  // Flash all layers in area
+  let flash = 0;
+  const color = getAreaColors(activeCentro, sc.areas)[area] || '#4f8ef7';
+  const interval = setInterval(() => {
+    mapLayers2.forEach(l => {
+      if (l._cpArea !== area) return;
+      if (flash % 2 === 0) l.setStyle({fillColor:'#ffffff', color:'#ffffff', fillOpacity:.9, weight:3});
+      else                  l.setStyle({fillColor:color, color:color, fillOpacity:.65, weight:1.5});
+    });
+    flash++;
+    if (flash >= 6) {
+      clearInterval(interval);
+      mapLayers2.forEach(l => {
+        if (l._cpArea === area) l.setStyle({fillColor:color, color:color, fillOpacity:.65, weight:1.5});
+      });
+    }
+  }, 220);
+}
+
+function flashCp(cp, layerMap, map) {
+  const lyr = layerMap[cp];
+  if (!lyr) return;
+  try {
+    const bounds = lyr.getBounds();
+    setMapViewLocked(true);
+    map.fitBounds(bounds, { maxZoom: 13, padding: [60, 60] });
+
+    let flash = 0;
+    const origFill = lyr.options?.style?.fillColor || lyr.options?.fillColor;
+    const origStroke = lyr.options?.style?.color || lyr.options?.color;
+    const interval = setInterval(() => {
+      if (flash % 2 === 0) lyr.setStyle({fillColor:'#ffffff', color:'#ffffff', fillOpacity:.9, weight:3});
+      else                  lyr.setStyle({fillColor:origFill, color:origStroke, fillOpacity:.65, weight:1.5});
+      flash++;
+      if (flash >= 6) {
+        clearInterval(interval);
+        lyr.setStyle({fillColor:origFill, color:origStroke, fillOpacity:.65, weight:1.5});
+      }
+    }, 220);
+
+    const sc = ALL_SCENARIOS[activeCentro]?.[activeScIdx];
+    if (sc) {
+      const area  = sc.cp_areas?.[cp];
+      const color = activeTab === 'mapareas'
+        ? (getAreaColors(activeCentro, sc.areas)[area] || '#4f8ef7')
+        : CENTRO_COLORS[activeCentro];
+      const content = activeTab === 'mapareas'
+        ? makePopupArea(cp, area, color, sc)
+        : makePopupCentro(cp, color);
+      L.popup().setLatLng(bounds.getCenter()).setContent(content).openOn(map);
+    }
+  } catch(e) { console.warn('flashCp error', e); }
+}
+
 </script>
 </body>
 </html>
