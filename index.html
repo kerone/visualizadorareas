@@ -228,6 +228,40 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
 .map-overlay-legend-name{flex:1;overflow:hidden;text-overflow:ellipsis}
 .map-overlay-legend-toggle{position:absolute;bottom:24px;left:16px;z-index:1001;background:rgba(13,15,20,0.88);border:1px solid rgba(255,255,255,0.12);border-radius:6px;padding:5px 10px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6b7694;cursor:pointer;display:none;backdrop-filter:blur(4px);transition:color .15s,border-color .15s}
 .map-overlay-legend-toggle:hover{color:#e2e8f0;border-color:rgba(255,255,255,0.28)}
+/* ── CUSTOM POLYGON ANALYZER ─────────────────────────────────────────────── */
+.poly-toggle-btn{padding:0 14px;height:32px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;cursor:pointer;border-radius:5px;transition:all .15s;white-space:nowrap;display:flex;align-items:center;gap:6px}
+.poly-toggle-btn:hover{border-color:#ffd54a;color:#ffd54a;background:rgba(255,213,74,.08)}
+.poly-toggle-btn.active{border-color:#ffd54a;color:#ffd54a;background:rgba(255,213,74,.14)}
+.poly-panel{position:absolute;top:12px;right:12px;z-index:1200;width:316px;max-height:calc(100% - 24px);background:rgba(13,15,20,.96);border:1px solid #2a3550;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,.7);backdrop-filter:blur(8px);display:none;flex-direction:column;overflow:hidden}
+.poly-panel.open{display:flex}
+.poly-panel-head{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.08);flex-shrink:0}
+.poly-panel-title{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.06em;color:#ffd54a;text-transform:uppercase;flex:1}
+.poly-panel-close{background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;line-height:1;padding:0}
+.poly-panel-close:hover{color:var(--text)}
+.poly-panel-body{padding:12px;overflow-y:auto;display:flex;flex-direction:column;gap:10px}
+.poly-textarea{width:100%;height:88px;resize:vertical;background:#0d0f14;border:1px solid #2a3042;border-radius:6px;color:#cdd6f0;font-family:'IBM Plex Mono',monospace;font-size:11px;padding:8px;outline:none;line-height:1.5}
+.poly-textarea:focus{border-color:var(--accent)}
+.poly-textarea::placeholder{color:#3d4768}
+.poly-hint{font-family:'IBM Plex Sans',sans-serif;font-size:10px;color:#566080;line-height:1.45}
+.poly-btn-row{display:flex;gap:6px;flex-wrap:wrap}
+.poly-btn{flex:1;min-width:80px;padding:7px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:5px;letter-spacing:.03em}
+.poly-btn:hover{border-color:var(--accent);color:var(--accent)}
+.poly-btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.poly-btn.primary:hover{background:#3d7ce0;color:#fff}
+.poly-btn.draw.active{background:#ffd54a;border-color:#ffd54a;color:#0d0f14}
+.poly-btn.ghost{background:transparent;flex:0 0 auto}
+.poly-results{display:flex;flex-direction:column;gap:8px;border-top:1px solid rgba(255,255,255,.08);padding-top:10px}
+.poly-summary{display:flex;align-items:baseline;gap:8px;font-family:'IBM Plex Mono',monospace}
+.poly-summary-big{font-size:24px;font-weight:600;color:#fff;line-height:1}
+.poly-summary-lbl{font-size:10px;color:var(--muted);letter-spacing:.03em;line-height:1.3}
+.poly-sec-lbl{font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;letter-spacing:.08em;color:#3d4768;text-transform:uppercase;margin-top:2px}
+.poly-area-row{display:flex;align-items:center;gap:8px;font-size:11px;padding:2px 0}
+.poly-area-dot{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+.poly-area-name{flex:1;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.poly-area-count{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted);background:rgba(255,255,255,.06);padding:1px 7px;border-radius:10px;flex-shrink:0}
+.poly-cp-list{display:flex;flex-wrap:wrap;gap:3px;max-height:120px;overflow-y:auto}
+.poly-cp-chip{font-family:'IBM Plex Mono',monospace;font-size:10px;padding:1px 5px;border-radius:3px;border:1px solid rgba(255,255,255,.14);color:#c8d0e0;background:rgba(255,255,255,.05)}
+.poly-empty{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);text-align:center;padding:10px 0;line-height:1.5}
 .csv-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:10000;align-items:center;justify-content:center}
 .csv-modal-overlay.open{display:flex}
 .csv-modal-box{background:#13161e;border:1px solid #2d3347;border-radius:12px;width:460px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.7)}
@@ -255,6 +289,10 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
   <span class="topbar-title">VISUALIZADOR ÁREAS COLMENAS</span>
   <div class="topbar-spacer"></div>
   <nav class="topbar-nav">
+    <button class="poly-toggle-btn" id="polyToggleBtn" onclick="togglePolyPanel()">
+      <span class="tab-icon">⬚</span> ANALIZAR POLÍGONO
+    </button>
+    <div class="topbar-divider"></div>
     <div class="csv-group">
       <button class="csv-btn" onclick="openCsvModal()">
         <span class="tab-icon">⬆</span> CARGAR CSV
@@ -356,6 +394,26 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
   <div class="map-area">
     <div id="map"></div>
     <div class="loading-msg" id="loadingMsg" style="display:none">Cargando GeoJSON…</div>
+
+    <!-- CUSTOM POLYGON ANALYZER PANEL -->
+    <div class="poly-panel" id="polyPanel">
+      <div class="poly-panel-head">
+        <span class="poly-panel-title">⬚ Analizar área por polígono</span>
+        <button class="poly-panel-close" onclick="togglePolyPanel(false)" title="Cerrar">✕</button>
+      </div>
+      <div class="poly-panel-body">
+        <div class="poly-sec-lbl">Coordenadas (lat, lng — una por línea)</div>
+        <textarea class="poly-textarea" id="polyTextarea" spellcheck="false"
+          placeholder="40.4250, -3.7038&#10;40.4180, -3.6890&#10;40.4050, -3.6980&#10;40.4090, -3.7150"></textarea>
+        <div class="poly-hint">Pega pares <b>lat,lng</b> (como en Google Maps) o pulsa «Dibujar» para trazarlo con el ratón sobre el mapa. Se calculan los CP del escenario actual que caen dentro.</div>
+        <div class="poly-btn-row">
+          <button class="poly-btn draw" id="polyDrawBtn" onclick="toggleDraw()"><span>✏️</span> Dibujar</button>
+          <button class="poly-btn primary" onclick="analyzeFromTextarea()"><span>▶</span> Analizar</button>
+          <button class="poly-btn ghost" onclick="clearCustomPolygon()">Limpiar</button>
+        </div>
+        <div class="poly-results" id="polyResults" style="display:none"></div>
+      </div>
+    </div>
     <div class="legend" id="legend"></div>
     <!-- OVERLAY LEGEND (vista Áreas) -->
     <div class="map-overlay-legend" id="mapOverlayLegend">
@@ -474,6 +532,9 @@ let cpToLayer = {}, allLayers = [];
 let areaColorCache = {};
 let hiddenAreas = new Set();
 let activeTab = 'mapa'; // 'mapa'|'mapareas'
+// custom polygon analyzer state (drawMode is read by CP click handlers)
+let drawMode = false, customPolyLayer = null, _customActive = false;
+let _drawPts = [], _drawMarkers = [], _drawPreview = null;
 
 // ── INIT ─────────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
@@ -909,7 +970,7 @@ async function renderMap() {
           layer.on({
             mouseover(e){ e.target.setStyle({weight:2.5, opacity:1, fillOpacity:0.85}); e.target.bringToFront(); },
             mouseout(e){ e.target.setStyle({color:centerColor, weight:1.5, fillColor:centerColor, fillOpacity:0.65, opacity:0.75}); },
-            click(e){ L.popup().setLatLng(e.latlng)
+            click(e){ if(drawMode)return; L.popup().setLatLng(e.latlng)
               .setContent(makePopupCentro(cp, centerColor))
               .openOn(leafletMap); }
           });
@@ -974,7 +1035,7 @@ async function renderMapAreas() {
           layer.on({
             mouseover(e){ e.target.setStyle({weight:2.5, opacity:1, fillOpacity:0.85}); e.target.bringToFront(); },
             mouseout(e){ e.target.setStyle({color:color, weight:1.5, fillColor:color, fillOpacity: hiddenAreas.has(area)?0:0.65, opacity: hiddenAreas.has(area)?0:0.75}); },
-            click(e){ L.popup().setLatLng(e.latlng)
+            click(e){ if(drawMode)return; L.popup().setLatLng(e.latlng)
               .setContent(makePopupArea(cp, area, color, ALL_SCENARIOS[activeCentro][activeScIdx]))
               .openOn(leafletMap2); }
           });
@@ -2010,6 +2071,269 @@ function flashCp(cp, layerMap, map) {
       L.popup().setLatLng(bounds.getCenter()).setContent(content).openOn(map);
     }
   } catch(e) { console.warn('flashCp error', e); }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// CUSTOM POLYGON ANALYZER — pinta un polígono (pegado o dibujado) y calcula
+// qué CPs del escenario actual caen dentro, y a qué áreas pertenecen.
+// ════════════════════════════════════════════════════════════════════════════
+
+function togglePolyPanel(force) {
+  const panel = document.getElementById('polyPanel');
+  const btn = document.getElementById('polyToggleBtn');
+  const open = force === undefined ? !panel.classList.contains('open') : !!force;
+  panel.classList.toggle('open', open);
+  btn.classList.toggle('active', open);
+  if (open) setTimeout(() => document.getElementById('polyTextarea').focus(), 60);
+  else if (drawMode) stopDraw();
+}
+
+// ── parseo de coordenadas ────────────────────────────────────────────────────
+// España (incl. Canarias) como bbox generoso para auto-detectar el orden lat/lng
+const _ES_LAT = [27, 44.5], _ES_LNG = [-18.7, 5];
+const _inR = (v, r) => v >= r[0] && v <= r[1];
+
+function parseCoords(text) {
+  const rows = [];
+  text.split(/[\n;]+/).forEach(line => {
+    const m = line.trim().match(/(-?\d+(?:\.\d+)?)[\s,]+(-?\d+(?:\.\d+)?)/);
+    if (m) rows.push([parseFloat(m[1]), parseFloat(m[2])]);
+  });
+  if (rows.length < 3) return null;
+  // ¿lat,lng o lng,lat? Elegimos el orden con más puntos dentro de España
+  let asLatLng = 0, asLngLat = 0;
+  rows.forEach(([a, b]) => {
+    if (_inR(a, _ES_LAT) && _inR(b, _ES_LNG)) asLatLng++;
+    if (_inR(a, _ES_LNG) && _inR(b, _ES_LAT)) asLngLat++;
+  });
+  const swap = asLngLat > asLatLng;
+  return rows.map(([a, b]) => swap ? [b, a] : [a, b]); // -> [lat,lng]
+}
+
+// ── geometría (sin librerías externas) ───────────────────────────────────────
+function _pointInRing(pt, ring) {
+  let inside = false, x = pt[0], y = pt[1];
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const xi = ring[i][0], yi = ring[i][1], xj = ring[j][0], yj = ring[j][1];
+    if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) inside = !inside;
+  }
+  return inside;
+}
+function _pointInPoly(pt, poly) { // poly = [anilloExterior, hueco1, ...]
+  if (!_pointInRing(pt, poly[0])) return false;
+  for (let k = 1; k < poly.length; k++) if (_pointInRing(pt, poly[k])) return false;
+  return true;
+}
+function _segInt(p1, p2, p3, p4) {
+  const ccw = (a, b, c) => (c[1] - a[1]) * (b[0] - a[0]) > (b[1] - a[1]) * (c[0] - a[0]);
+  return ccw(p1, p3, p4) !== ccw(p2, p3, p4) && ccw(p1, p2, p3) !== ccw(p1, p2, p4);
+}
+function _ringsCross(ra, rb) {
+  for (let i = 0; i < ra.length; i++) {
+    const a1 = ra[i], a2 = ra[(i + 1) % ra.length];
+    for (let j = 0; j < rb.length; j++) {
+      const b1 = rb[j], b2 = rb[(j + 1) % rb.length];
+      if (_segInt(a1, a2, b1, b2)) return true;
+    }
+  }
+  return false;
+}
+// D = polígono dibujado [anillo]; C = polígono del CP [exterior, huecos...] (lng,lat)
+function _polysIntersect(D, C) {
+  const Do = D[0], Co = C[0];
+  for (const v of Co) if (_pointInPoly(v, D)) return true;
+  for (const v of Do) if (_pointInPoly(v, C)) return true;
+  return _ringsCross(Do, Co);
+}
+function _layerPolys(lyr) {
+  let gj;
+  try { gj = lyr.toGeoJSON(); } catch { return []; }
+  const feats = gj.type === 'FeatureCollection' ? gj.features : [gj];
+  const out = [];
+  feats.forEach(f => {
+    const g = f.geometry; if (!g) return;
+    if (g.type === 'Polygon') out.push(g.coordinates);
+    else if (g.type === 'MultiPolygon') g.coordinates.forEach(p => out.push(p));
+  });
+  return out;
+}
+
+// ── dibujo sobre el mapa ─────────────────────────────────────────────────────
+function toggleDraw() { drawMode ? finishDraw() : startDraw(); }
+
+function startDraw() {
+  clearCustomPolygon();
+  drawMode = true;
+  _drawPts = []; _drawMarkers = [];
+  const b = document.getElementById('polyDrawBtn');
+  b.classList.add('active');
+  b.innerHTML = '<span>✓</span> Finalizar';
+  leafletMap.getContainer().style.cursor = 'crosshair';
+  setMapViewLocked(true);
+  leafletMap.doubleClickZoom.disable();
+  leafletMap.on('click', _onDrawClick);
+  leafletMap.on('dblclick', finishDraw);
+  showToast('✏️ Clic para añadir vértices · doble clic o «Finalizar» para cerrar');
+}
+function _onDrawClick(e) {
+  leafletMap.closePopup();
+  _drawPts.push(e.latlng);
+  const m = L.circleMarker(e.latlng, { radius: 4, color: '#ffd54a', fillColor: '#fff', fillOpacity: 1, weight: 2, interactive: false }).addTo(leafletMap);
+  _drawMarkers.push(m);
+  _updateDrawPreview();
+}
+function _updateDrawPreview() {
+  if (_drawPreview) { leafletMap.removeLayer(_drawPreview); _drawPreview = null; }
+  if (_drawPts.length >= 2)
+    _drawPreview = L.polyline(_drawPts, { color: '#ffd54a', weight: 2, dashArray: '5,5', interactive: false }).addTo(leafletMap);
+}
+function finishDraw() {
+  if (!drawMode) return;
+  // de-duplicar vértices casi idénticos (el doble clic añade un gemelo)
+  const pts = [];
+  _drawPts.forEach(ll => {
+    const last = pts[pts.length - 1];
+    if (!last || leafletMap.distance(last, ll) > 3) pts.push(ll);
+  });
+  _teardownDraw();
+  if (pts.length < 3) { showToast('⚠ Dibuja al menos 3 puntos'); return; }
+  createCustomPolygon(pts.map(ll => [ll.lat, ll.lng]));
+  syncTextareaFromPolygon();
+  analyzeCustomPolygon();
+}
+function stopDraw() { _teardownDraw(); }
+function _teardownDraw() {
+  drawMode = false;
+  leafletMap.off('click', _onDrawClick);
+  leafletMap.off('dblclick', finishDraw);
+  setTimeout(() => leafletMap.doubleClickZoom.enable(), 250);
+  leafletMap.getContainer().style.cursor = '';
+  _drawMarkers.forEach(m => { try { leafletMap.removeLayer(m); } catch {} });
+  _drawMarkers = [];
+  if (_drawPreview) { try { leafletMap.removeLayer(_drawPreview); } catch {} _drawPreview = null; }
+  _drawPts = [];
+  const b = document.getElementById('polyDrawBtn');
+  b.classList.remove('active');
+  b.innerHTML = '<span>✏️</span> Dibujar';
+}
+
+// ── ciclo de vida del polígono ───────────────────────────────────────────────
+function createCustomPolygon(latlngs) {
+  if (customPolyLayer) { try { leafletMap.removeLayer(customPolyLayer); } catch {} }
+  customPolyLayer = L.polygon(latlngs, {
+    color: '#ffd54a', weight: 2.5, dashArray: '7,5', fillColor: '#ffd54a', fillOpacity: 0.10, interactive: false
+  }).addTo(leafletMap);
+  return customPolyLayer;
+}
+function syncTextareaFromPolygon() {
+  if (!customPolyLayer) return;
+  const ll = customPolyLayer.getLatLngs()[0] || [];
+  document.getElementById('polyTextarea').value =
+    ll.map(p => `${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}`).join('\n');
+}
+function analyzeFromTextarea() {
+  if (drawMode) stopDraw();
+  const coords = parseCoords(document.getElementById('polyTextarea').value);
+  if (!coords) { showToast('⚠ Introduce al menos 3 pares lat,lng válidos'); return; }
+  createCustomPolygon(coords);
+  setMapViewLocked(true);
+  try { leafletMap.fitBounds(customPolyLayer.getBounds(), { padding: [40, 40], maxZoom: 14 }); } catch {}
+  analyzeCustomPolygon();
+}
+function clearCustomPolygon() {
+  if (drawMode) stopDraw();
+  if (customPolyLayer) { try { leafletMap.removeLayer(customPolyLayer); } catch {} customPolyLayer = null; }
+  document.getElementById('polyTextarea').value = '';
+  const res = document.getElementById('polyResults');
+  res.style.display = 'none'; res.innerHTML = '';
+  if (_customActive) {            // restaurar el estilo por defecto de los CP
+    _customActive = false;
+    setMapViewLocked(true);
+    if (activeTab === 'mapareas') renderMapAreas(); else renderMap();
+  }
+}
+
+// ── análisis ─────────────────────────────────────────────────────────────────
+function analyzeCustomPolygon() {
+  if (!customPolyLayer) { showToast('⚠ Primero dibuja o pega un polígono'); return; }
+  const sc = ALL_SCENARIOS[activeCentro]?.[activeScIdx];
+  if (!sc) return;
+  const layerMap = activeTab === 'mapareas' ? cpToLayer2 : cpToLayer1;
+  const D = customPolyLayer.toGeoJSON().geometry.coordinates; // anillos [lng,lat]
+  const drawnBounds = customPolyLayer.getBounds();
+
+  const matched = new Set();
+  Object.entries(layerMap).forEach(([cp, lyr]) => {
+    try {
+      if (!drawnBounds.intersects(lyr.getBounds())) return; // prefiltro por bbox
+      for (const C of _layerPolys(lyr)) {
+        if (_polysIntersect(D, C)) { matched.add(cp); break; }
+      }
+    } catch {}
+  });
+
+  _applyHighlight(matched);
+  _renderPolyResults(matched, sc);
+}
+function _applyHighlight(matched) {
+  const layerMap = activeTab === 'mapareas' ? cpToLayer2 : cpToLayer1;
+  const has = matched.size > 0;
+  const wasActive = _customActive;
+  _customActive = has;
+  if (!has) {                      // sin coincidencias: restaurar si hacía falta
+    if (wasActive) { setMapViewLocked(true); activeTab === 'mapareas' ? renderMapAreas() : renderMap(); }
+    return;
+  }
+  Object.entries(layerMap).forEach(([cp, lyr]) => {
+    if (matched.has(cp)) {
+      lyr.setStyle({ weight: 3, color: '#ffffff', opacity: 1, fillOpacity: 0.9 });
+      try { lyr.bringToFront(); } catch {}
+    } else {
+      lyr.setStyle({ weight: 0.5, opacity: 0.25, fillOpacity: 0.07 });
+    }
+  });
+}
+function _renderPolyResults(matched, sc) {
+  const res = document.getElementById('polyResults');
+  res.style.display = 'flex';
+  if (matched.size === 0) {
+    res.innerHTML = '<div class="poly-empty">Ningún CP del escenario actual<br>cae dentro del polígono.</div>';
+    res._cps = [];
+    return;
+  }
+  const byArea = {};
+  matched.forEach(cp => { const a = sc.cp_areas[cp] || '—'; (byArea[a] = byArea[a] || []).push(cp); });
+  const areaColors = getAreaColors(activeCentro, sc.areas);
+  const areas = Object.keys(byArea).sort((a, b) => byArea[b].length - byArea[a].length);
+  const cpsSorted = [...matched].sort();
+
+  let html = `<div class="poly-summary">
+      <span class="poly-summary-big">${matched.size}</span>
+      <span class="poly-summary-lbl">CP${matched.size !== 1 ? 's' : ''} afectado${matched.size !== 1 ? 's' : ''} · ${areas.length} área${areas.length !== 1 ? 's' : ''}</span>
+    </div>
+    <div class="poly-sec-lbl">Áreas afectadas</div>`;
+  areas.forEach(a => {
+    const c = areaColors[a] || '#6b7694';
+    html += `<div class="poly-area-row">
+      <span class="poly-area-dot" style="background:${c}"></span>
+      <span class="poly-area-name" title="${a}">${a}</span>
+      <span class="poly-area-count">${byArea[a].length} CP</span>
+    </div>`;
+  });
+  html += `<div class="poly-sec-lbl">Códigos postales (${cpsSorted.length})</div>
+    <div class="poly-cp-list">${cpsSorted.map(cp => `<span class="poly-cp-chip">${cp}</span>`).join('')}</div>
+    <div class="poly-btn-row"><button class="poly-btn ghost" onclick="copyPolyCps()">⧉ Copiar CPs</button></div>`;
+  res.innerHTML = html;
+  res._cps = cpsSorted;
+}
+function copyPolyCps() {
+  const cps = (document.getElementById('polyResults')._cps) || [];
+  if (!cps.length) return;
+  if (navigator.clipboard) navigator.clipboard.writeText(cps.join(', ')).then(
+    () => showToast(`⧉ ${cps.length} CPs copiados`),
+    () => showToast('⚠ No se pudo copiar')
+  );
+  else showToast('⚠ Portapapeles no disponible');
 }
 
 </script>
