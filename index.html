@@ -405,7 +405,7 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
         <div class="poly-sec-lbl">Coordenadas (lat, lng — una por línea)</div>
         <textarea class="poly-textarea" id="polyTextarea" spellcheck="false"
           placeholder="40.4250, -3.7038&#10;40.4180, -3.6890&#10;40.4050, -3.6980&#10;40.4090, -3.7150"></textarea>
-        <div class="poly-hint">Pega pares <b>lat,lng</b> (como en Google Maps) o pulsa «Dibujar» para trazarlo con el ratón sobre el mapa. Se calculan los CP del escenario actual que caen dentro.</div>
+        <div class="poly-hint">Pega pares <b>lat,lng</b> (como en Google Maps) o un <b>POLYGON((...))</b> en formato WKT, o pulsa «Dibujar» para trazarlo sobre el mapa. Se calculan los CP del escenario actual que caen dentro.</div>
         <div class="poly-btn-row">
           <button class="poly-btn draw" id="polyDrawBtn" onclick="toggleDraw()"><span>✏️</span> Dibujar</button>
           <button class="poly-btn primary" onclick="analyzeFromTextarea()"><span>▶</span> Analizar</button>
@@ -2095,10 +2095,19 @@ const _inR = (v, r) => v >= r[0] && v <= r[1];
 
 function parseCoords(text) {
   const rows = [];
-  text.split(/[\n;]+/).forEach(line => {
-    const m = line.trim().match(/(-?\d+(?:\.\d+)?)[\s,]+(-?\d+(?:\.\d+)?)/);
-    if (m) rows.push([parseFloat(m[1]), parseFloat(m[2])]);
-  });
+  if (/\(\(/.test(text) || /polygon/i.test(text)) {
+    // WKT: POLYGON ((lng lat, lng lat, ...)) — pares por coma, valores por espacio
+    text.split(',').forEach(tok => {
+      const m = tok.match(/(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)/);
+      if (m) rows.push([parseFloat(m[1]), parseFloat(m[2])]);
+    });
+  } else {
+    // Una coordenada por línea: "lat, lng" (acepta coma o espacio como separador)
+    text.split(/[\n;]+/).forEach(line => {
+      const m = line.trim().match(/(-?\d+(?:\.\d+)?)[\s,]+(-?\d+(?:\.\d+)?)/);
+      if (m) rows.push([parseFloat(m[1]), parseFloat(m[2])]);
+    });
+  }
   if (rows.length < 3) return null;
   // ¿lat,lng o lng,lat? Elegimos el orden con más puntos dentro de España
   let asLatLng = 0, asLngLat = 0;
