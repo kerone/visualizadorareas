@@ -32,7 +32,6 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
 .panel-toggle-icon{font-size:13px}
 .main-view{position:relative}
 .main-view.panel-collapsed .sidebar,.main-view.panel-collapsed .mareas-sidebar{display:none!important}
-.map-overlay-legend-title{cursor:pointer;user-select:none}
 /* LÍNEA TEMPORAL horizontal */
 .timeline-bar{display:none;align-items:stretch;gap:6px;background:var(--bg2);border-bottom:1px solid var(--border);padding:6px 10px;flex-shrink:0}
 .timeline-bar.shown{display:flex}
@@ -51,9 +50,11 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
 .tlb-seg.today{background:rgba(74,222,128,.10);box-shadow:inset 0 0 0 1px rgba(74,222,128,.45);border-bottom-color:#4ade80;color:#bbf7d0}
 .tlb-seg.today:hover{background:rgba(74,222,128,.16)}
 .tlb-seg.today.active{background:rgba(74,222,128,.24);box-shadow:inset 0 0 0 1px #4ade80;border-bottom-color:#4ade80;color:#fff}
-.map-overlay-legend.user-hidden{display:none!important}
-.map-overlay-legend.collapsed #mapOverlayLegendRows{display:none}
-.map-overlay-legend.collapsed .map-overlay-legend-title{margin-bottom:0;padding-bottom:0;border-bottom:none}
+.map-overlay-legend.empty{display:none!important}
+.map-overlay-legend-head{position:sticky;top:-10px;z-index:1;display:flex;align-items:center;gap:10px;margin:-10px -14px 8px;padding:10px 14px 6px;background:rgba(13,15,20,0.97);border-bottom:1px solid rgba(255,255,255,0.08)}
+.map-overlay-legend-head .map-overlay-legend-title{flex:1;margin:0;padding:0;border:none}
+.map-overlay-legend.user-hidden #mapOverlayLegendRows{display:none}
+.map-overlay-legend.user-hidden .map-overlay-legend-head{margin-bottom:-10px;border-bottom:none}
 
 /* TOPBAR */
 .topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 20px;display:flex;align-items:center;gap:0;flex-shrink:0;height:48px}
@@ -246,11 +247,7 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
 .cp-map-label{font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:700;text-align:center;white-space:nowrap;text-shadow:0 0 3px rgba(0,0,0,0.9),0 0 6px rgba(0,0,0,0.7),1px 1px 0 rgba(0,0,0,0.8),-1px -1px 0 rgba(0,0,0,0.8);pointer-events:none;opacity:.9;display:none}
 
 /* MAP OVERLAY LEGEND */
-.legend-dock{position:absolute;bottom:24px;left:16px;z-index:1000;display:none;flex-direction:column;align-items:flex-start;gap:6px;max-height:calc(100% - 60px);max-width:260px}
-.legend-dock.shown{display:flex}
-.legend-toggle-wrap{display:flex;align-items:center;gap:8px;padding:5px 10px;background:rgba(13,15,20,0.92);border:1px solid rgba(255,255,255,0.12);border-radius:8px;backdrop-filter:blur(6px);box-shadow:0 4px 14px rgba(0,0,0,0.5);flex-shrink:0}
-.legend-toggle-label{font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;color:rgba(107,118,148,0.9);letter-spacing:.1em}
-.map-overlay-legend{position:relative;min-height:0;background:rgba(13,15,20,0.92);border:1px solid rgba(255,255,255,0.12);border-radius:10px;padding:10px 14px;max-width:260px;overflow-y:auto;backdrop-filter:blur(6px);box-shadow:0 4px 20px rgba(0,0,0,0.6);display:none;pointer-events:auto}
+.map-overlay-legend{position:absolute;bottom:24px;left:16px;z-index:1000;background:rgba(13,15,20,0.92);border:1px solid rgba(255,255,255,0.12);border-radius:10px;padding:10px 14px;max-width:260px;max-height:calc(100% - 110px);overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;backdrop-filter:blur(6px);box-shadow:0 4px 20px rgba(0,0,0,0.6);display:none;pointer-events:auto}
 .map-overlay-legend.visible{display:block}
 .map-overlay-legend-title{font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;color:rgba(107,118,148,0.9);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.08)}
 .map-overlay-legend-row{display:flex;align-items:center;gap:8px;padding:2px 0;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#c8d4e8;white-space:nowrap;overflow:hidden}
@@ -294,7 +291,7 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
   .panel-toggle-label{display:none}
   /* el panel pasa a ser un cajón sobre el mapa */
   .sidebar,.mareas-sidebar{position:absolute;top:0;right:0;bottom:0;width:min(320px,88vw);z-index:1100;box-shadow:-8px 0 30px rgba(0,0,0,.55)}
-  .legend-dock{left:10px;bottom:44px;max-width:60vw;max-height:45%}
+  .map-overlay-legend{left:10px;bottom:44px;max-width:60vw;max-height:45%}
 }
 </style>
 </head>
@@ -303,8 +300,8 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
 <div class="topbar">
   <span class="topbar-title"><span class="hide-sm">VISUALIZADOR </span>ÁREAS COLMENAS</span>
   <div class="view-toggle" role="tablist" aria-label="Vista">
-    <button class="view-toggle-btn active" id="navCentro" onclick="setViewMode('centros')"><span class="view-toggle-icon">⬡</span>Centro</button>
-    <button class="view-toggle-btn" id="navAreas" onclick="setViewMode('areas')"><span class="view-toggle-icon">⬢</span>Áreas</button>
+    <button class="view-toggle-btn active" id="navAreas" onclick="setViewMode('areas')"><span class="view-toggle-icon">⬢</span>Áreas</button>
+    <button class="view-toggle-btn" id="navCentro" onclick="setViewMode('centros')"><span class="view-toggle-icon">⬡</span>Centro</button>
   </div>
   <div class="topbar-spacer"></div>
   <nav class="topbar-nav">
@@ -408,28 +405,25 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
     <div class="loading-msg" id="loadingMsg" style="display:none">Cargando GeoJSON…</div>
     <div class="legend" id="legend"></div>
     <!-- OVERLAY LEGEND (vista Áreas) -->
-    <div class="legend-dock" id="legendDock">
-      <div class="legend-toggle-wrap" title="Mostrar/ocultar la leyenda de áreas">
-        <span class="legend-toggle-label">LEYENDA</span>
-        <label class="area-toggle">
+    <div class="map-overlay-legend empty" id="mapOverlayLegend">
+      <div class="map-overlay-legend-head">
+        <div class="map-overlay-legend-title" id="mapOverlayLegendTitle">ÁREAS</div>
+        <label class="area-toggle" title="Mostrar/ocultar la leyenda de áreas">
           <input type="checkbox" id="legendToggleCb" checked onchange="setLegendVisible(this.checked)">
           <span class="area-toggle-track"></span>
           <span class="area-toggle-thumb"></span>
         </label>
       </div>
-      <div class="map-overlay-legend" id="mapOverlayLegend">
-        <div class="map-overlay-legend-title" id="mapOverlayLegendTitle" onclick="toggleOverlayLegend()" title="Plegar/desplegar leyenda">ÁREAS</div>
-        <div id="mapOverlayLegendRows"></div>
-      </div>
+      <div id="mapOverlayLegendRows"></div>
     </div>
   </div>
   <!-- RIGHT SIDEBAR: scenarios (centros mode) -->
-  <div class="sidebar" id="sidebarLeft">
+  <div class="sidebar" id="sidebarLeft" style="display:none">
     <div class="sidebar-header">ESCENARIOS — <span id="centroTitle">—</span></div>
     <div class="scenario-list" id="scenarioList"></div>
   </div>
   <!-- RIGHT SIDEBAR: areas -->
-  <div class="mareas-sidebar" id="sidebarRight" style="display:none">
+  <div class="mareas-sidebar" id="sidebarRight">
     <div class="sidebar-header" style="display:flex;align-items:center;gap:8px">
       <span>ÁREAS — <span id="mareasCentroTitle">—</span></span>
       <span id="mareasAreaCount" style="margin-left:2px;font-size:9px;padding:2px 7px;border-radius:3px;background:rgba(79,142,247,.15);border:1px solid rgba(79,142,247,.3);color:var(--accent)"></span>
@@ -553,11 +547,12 @@ let geojsonCache = {};
 let cpToLayer = {}, allLayers = [];
 let areaColorCache = {};
 let hiddenAreas = new Set();
-let activeTab = 'mapa'; // 'mapa'|'mapareas'
+let activeTab = 'mapareas'; // 'mapa'|'mapareas' — se entra en la vista Áreas
 
 // ── INIT ─────────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
   initMaps();
+  setViewMode('areas'); // vista por defecto
   showLoadingOverlay(true);
   // Cargar datos desde JSONBin antes de renderizar nada
   loadFromJSONBin().then(loaded => {
@@ -807,6 +802,7 @@ function clearSelectionView() {
   document.getElementById('mareasAreaCount').textContent = '';
   document.getElementById('mapOverlayLegendRows').innerHTML = '';
   document.getElementById('mapOverlayLegendTitle').textContent = 'ÁREAS';
+  document.getElementById('mapOverlayLegend').classList.add('empty');
 }
 
 function buildScenarioChips() {
@@ -1324,6 +1320,7 @@ function renderAreasLegend(sc, areaColors) {
       overlayRows.appendChild(row);
     });
     overlayEl.classList.add('visible');
+    overlayEl.classList.remove('empty');
   }
 
   // Group CPs by area
@@ -1492,27 +1489,24 @@ function togglePanel() {
 
 // Toggle de la leyenda de áreas (se recuerda en el navegador)
 const LEGEND_VISIBLE_KEY = 'areasLegendVisibleV1';
-function setLegendVisible(visible) {
+function setLegendVisible(visible, remember = true) {
   document.getElementById('mapOverlayLegend').classList.toggle('user-hidden', !visible);
   const cb = document.getElementById('legendToggleCb');
   if (cb) cb.checked = visible;
-  try { localStorage.setItem(LEGEND_VISIBLE_KEY, visible ? '1' : '0'); } catch(_) {}
+  if (remember) try { localStorage.setItem(LEGEND_VISIBLE_KEY, visible ? '1' : '0'); } catch(_) {}
 }
 document.addEventListener('DOMContentLoaded', () => {
   let saved = null;
   try { saved = localStorage.getItem(LEGEND_VISIBLE_KEY); } catch(_) {}
   if (saved === '0') setLegendVisible(false);
+  // En móvil, sin preferencia guardada, la leyenda empieza plegada
+  else if (saved === null && NARROW_MQ.matches) setLegendVisible(false, false);
 });
-
-function toggleOverlayLegend() {
-  document.getElementById('mapOverlayLegend').classList.toggle('collapsed');
-}
 
 // En móvil el panel y la leyenda empiezan plegados para dejar el mapa libre
 document.addEventListener('DOMContentLoaded', () => {
   if (NARROW_MQ.matches) {
     setPanelCollapsed(true);
-    document.getElementById('mapOverlayLegend').classList.add('collapsed');
   }
 });
 NARROW_MQ.addEventListener?.('change', e => setPanelCollapsed(e.matches));
@@ -1529,7 +1523,6 @@ function setViewMode(mode) {
   // Hide overlay legend when switching to centros mode
   const overlayEl = document.getElementById('mapOverlayLegend');
   if (overlayEl) overlayEl.classList.toggle('visible', mode === 'areas');
-  document.getElementById('legendDock').classList.toggle('shown', mode === 'areas');
   // Clear ALL layers from both modes before re-rendering
   clearMap1();
   clearMap2();
