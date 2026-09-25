@@ -66,6 +66,13 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
 .centro-option:hover{background:rgba(255,255,255,.06);color:var(--text)}
 .centro-option.selected{color:#fff}
 .centro-option-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.centro-option-check{width:13px;height:13px;border:1px solid #3a4157;border-radius:3px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;line-height:1;color:transparent;transition:all .1s}
+.centro-option.selected .centro-option-check{background:var(--accent);border-color:var(--accent);color:#fff}
+.centro-option-solo{margin-left:auto;font-size:9px;padding:1px 6px;border-radius:3px;border:1px solid #2d3347;color:var(--muted);opacity:0;transition:opacity .1s}
+.centro-option:hover .centro-option-solo{opacity:1}
+.centro-option-solo:hover{color:var(--text);border-color:var(--accent)}
+.centro-dropdown-footer{border-top:1px solid #2d3347;padding:6px 12px;font-family:'IBM Plex Mono',monospace;font-size:9px;color:#4a5568;letter-spacing:.03em}
+.area-centro-badge{font-family:'IBM Plex Mono',monospace;font-size:8px;font-weight:600;padding:1px 4px;border-radius:2px;margin-right:4px;color:#fff;flex-shrink:0}
 .centro-label{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.05em;margin-right:4px}
 .scenario-chips{display:flex;gap:4px;align-items:center;margin-left:auto}
 
@@ -313,7 +320,7 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
 
 <!-- CENTRO + SCENARIO SELECTOR BAR -->
 <div class="centro-bar">
-  <span class="centro-label">CENTRO:</span>
+  <span class="centro-label">CENTROS:</span>
   <div class="centro-select-wrap" id="centroDropdownWrap">
     <div class="centro-dropdown" id="centroDropdown" onclick="toggleCentroDropdown()">
       <span id="centroDropdownLabel">— seleccionar —</span>
@@ -322,6 +329,7 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
     <div class="centro-dropdown-menu" id="centroDropdownMenu" style="display:none">
       <input type="text" class="centro-search-input" id="centroSearchInput" placeholder="Buscar centro…" oninput="filterCentros(this.value)" onclick="event.stopPropagation()">
       <div class="centro-dropdown-list" id="centroDropdownList"></div>
+      <div class="centro-dropdown-footer">Clic: añadir/quitar · «solo»: solo ese</div>
     </div>
   </div>
   <!-- CP / ÁREA GLOBAL SEARCH -->
@@ -343,7 +351,7 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
   </div>
   <!-- RESET ZOOM BUTTON (visible only when view is locked) -->
   <button id="resetZoomBtn" onclick="resetMapView()"
-    title="Volver a ver todo el centro"
+    title="Volver a ver todos los centros seleccionados"
     style="display:none;padding:0 10px;height:32px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;cursor:pointer;border-radius:5px;transition:all .15s;white-space:nowrap;display:none;align-items:center;gap:5px;letter-spacing:.03em">
     ⊙ reset zoom
   </button>
@@ -466,8 +474,11 @@ const CENTRO_COLORS = new Proxy({}, {
 });
 
 // ── STATE ────────────────────────────────────────────────────────────────────
-let activeCentro = 'vlc1';
+let activeCentro = 'vlc1';       // primer centro seleccionado
+let activeCentros = ['vlc1'];    // todos los centros seleccionados
 let activeScIdx = 0;
+let _multiScenarios = [];        // escenarios combinados cuando hay >1 centro
+let _renderToken = 0;            // descarta renders async obsoletos
 let leafletMap = null, leafletMap2 = null;
 let geojsonCache = {};
 let cpToLayer = {}, allLayers = [];
@@ -507,8 +518,12 @@ function renderCentroOptions(list) {
   container.innerHTML = '';
   list.forEach(c => {
     const div = document.createElement('div');
-    div.className = 'centro-option' + (c === activeCentro ? ' selected' : '');
+    div.className = 'centro-option' + (activeCentros.includes(c) ? ' selected' : '');
     div.dataset.value = c;
+    const check = document.createElement('span');
+    check.className = 'centro-option-check';
+    check.textContent = '✓';
+    div.appendChild(check);
     const dot = document.createElement('span');
     dot.className = 'centro-option-dot';
     dot.style.background = CENTRO_COLORS[c];
@@ -523,7 +538,13 @@ function renderCentroOptions(list) {
     const lbl = document.createElement('span');
     lbl.textContent = c.toUpperCase();
     div.appendChild(lbl);
-    div.onclick = (e) => { e.stopPropagation(); selectCentroOption(c); };
+    const solo = document.createElement('span');
+    solo.className = 'centro-option-solo';
+    solo.textContent = 'solo';
+    solo.title = 'Ver solo este centro';
+    solo.onclick = (e) => { e.stopPropagation(); selectCentroOption(c); };
+    div.appendChild(solo);
+    div.onclick = (e) => { e.stopPropagation(); toggleCentroOption(c); };
     container.appendChild(div);
   });
 }
@@ -562,35 +583,138 @@ function selectCentroOption(c) {
   setCentro(c);
 }
 
-function setCentro(c) {
-  activeCentro = c;
-  activeScIdx = 0;
+// Añade/quita un centro de la selección (mínimo uno). El menú sigue abierto.
+function toggleCentroOption(c) {
+  let next;
+  if (activeCentros.includes(c)) {
+    if (activeCentros.length === 1) return;
+    next = activeCentros.filter(x => x !== c);
+  } else {
+    next = [...activeCentros, c];
+  }
+  setCentros(next);
+}
+
+function setCentro(c, scIdx) {
+  setCentros([c], scIdx);
+}
+
+// ── MULTI-CENTRO ─────────────────────────────────────────────────────────────
+const isMulti = () => activeCentros.length > 1;
+const selectionLabel = () => activeCentros.map(c => c.toUpperCase()).join(' + ');
+const selectionColor = () => isMulti() ? 'var(--accent)' : CENTRO_COLORS[activeCentro];
+const colorKey = () => activeCentros.join('+');
+
+// Escenarios de la selección actual (reales si hay 1 centro, combinados si hay varios)
+function getActiveScenarios() {
+  return isMulti() ? _multiScenarios : (ALL_SCENARIOS[activeCentro] || []);
+}
+function getActiveScenario() {
+  return getActiveScenarios()[activeScIdx];
+}
+
+function isoAddDays(iso, n) {
+  const [y,m,d] = iso.split('-').map(Number);
+  return isoDate(new Date(y, m-1, d + n));
+}
+function scCoversIso(sc, iso) {
+  return (!sc.from || sc.from <= iso) && (!sc.to || sc.to >= iso);
+}
+
+// Combina los escenarios de varios centros en periodos comunes: cada vez que
+// cualquiera de ellos cambia empieza un periodo nuevo.
+function buildMultiScenarios(centros) {
+  const bounds = new Set();
+  centros.forEach(c => (ALL_SCENARIOS[c] || []).forEach(sc => { if (sc.from) bounds.add(sc.from); }));
+  const sorted = [...bounds].sort();
+
+  // Áreas con el mismo nombre en varios centros → se desambiguan con el centro
+  const areaOwners = {};
+  centros.forEach(c => (ALL_SCENARIOS[c] || []).forEach(sc =>
+    (sc.areas || []).forEach(a => { (areaOwners[a] = areaOwners[a] || new Set()).add(c); })));
+  const areaKey = (c, a) => areaOwners[a]?.size > 1 ? `${a} · ${c.toUpperCase()}` : a;
+
+  const periods = [];
+  if (!sorted.length) periods.push({from:null, to:null, ref:null});
+  else {
+    periods.push({from:null, to:isoAddDays(sorted[0], -1), ref:isoAddDays(sorted[0], -1)});
+    sorted.forEach((b, i) => {
+      const to = i < sorted.length - 1 ? isoAddDays(sorted[i+1], -1) : null;
+      periods.push({from:b, to, ref:b});
+    });
+  }
+
+  const fmtIso = iso => { const [y,m,d] = iso.split('-'); return `${d}/${m}/${y}`; };
+  const labelOf = (fr, to) => {
+    if (!fr && !to) return '2026';
+    if (!fr) return `hasta ${fmtIso(to)}`;
+    if (!to) return `desde ${fmtIso(fr)}`;
+    return `${fmtIso(fr)} – ${fmtIso(to)}`;
+  };
+
+  const out = [];
+  periods.forEach(p => {
+    const parts = {};
+    centros.forEach(c => {
+      const scs = ALL_SCENARIOS[c] || [];
+      const idx = p.ref ? scs.findIndex(sc => scCoversIso(sc, p.ref)) : scs.length - 1;
+      if (idx >= 0) parts[c] = idx;
+    });
+    const prev = out[out.length - 1];
+    if (prev && JSON.stringify(prev.parts) === JSON.stringify(parts)) {
+      prev.to = p.to;
+      prev.label = labelOf(prev.from, prev.to);
+      return;
+    }
+    const cp_areas = {}, cp_centro = {}, area_centro = {}, areaKeyOf = {}, areas = [];
+    centros.forEach(c => {
+      if (parts[c] === undefined) return;
+      const sc = ALL_SCENARIOS[c][parts[c]];
+      areaKeyOf[c] = {};
+      [...(sc.areas || [])].sort().forEach(a => {
+        const k = areaKey(c, a);
+        areaKeyOf[c][a] = k; area_centro[k] = c; areas.push(k);
+      });
+      Object.entries(sc.cp_areas || {}).forEach(([cp, a]) => {
+        cp_areas[cp] = areaKey(c, a); cp_centro[cp] = c;
+      });
+    });
+    out.push({from:p.from, to:p.to, label:labelOf(p.from, p.to), parts, cp_areas, cp_centro, area_centro, areaKeyOf, areas});
+  });
+  out.forEach((sc, i) => sc.id = `E${i+1}`);
+  return out;
+}
+
+function setCentros(centros, scIdx) {
+  centros = [...new Set(centros)].filter(c => ALL_SCENARIOS[c]).sort();
+  if (!centros.length) return;
+  activeCentros = centros;
+  activeCentro = centros[0];
+  _multiScenarios = isMulti() ? buildMultiScenarios(centros) : [];
   setMapViewLocked(false); // new centro → always fit to its bounds
-  // update centro buttons
   // Update dropdown label + color
   const lbl = document.getElementById('centroDropdownLabel');
   const dd = document.getElementById('centroDropdown');
-  if (lbl) lbl.textContent = c.toUpperCase();
+  if (lbl) lbl.textContent = centros.length > 4 ? `${centros.length} centros` : selectionLabel();
   if (dd) {
-    const color = CENTRO_COLORS[c];
+    const color = isMulti() ? '#4f8ef7' : CENTRO_COLORS[activeCentro];
     dd.style.borderColor = color;
-    dd.style.boxShadow = `0 0 0 1px ${color}44`;
+    dd.style.boxShadow = color.startsWith('#') ? `0 0 0 1px ${color}44` : 'none';
   }
   // Mark selected in list
   document.querySelectorAll('.centro-option').forEach(el => {
-    el.classList.toggle('selected', el.dataset.value === c);
+    el.classList.toggle('selected', activeCentros.includes(el.dataset.value));
   });
-  document.getElementById('centroTitle').textContent = c.toUpperCase();
-  document.getElementById('mareasCentroTitle').textContent = c.toUpperCase();
+  document.getElementById('centroTitle').textContent = selectionLabel();
+  document.getElementById('mareasCentroTitle').textContent = selectionLabel();
   // Auto-select the scenario that contains today
-  const today = new Date();
-  const scs = ALL_SCENARIOS[c] || [];
-  let todayIdx = scs.findIndex(sc => {
-    const fr = sc.from ? new Date(sc.from) : null;
-    const to = sc.to ? new Date(sc.to) : null;
-    return (!fr || fr <= today) && (!to || to >= today);
-  });
-  activeScIdx = todayIdx >= 0 ? todayIdx : scs.length - 1;
+  const scs = getActiveScenarios();
+  if (scIdx !== undefined && scs[scIdx]) activeScIdx = scIdx;
+  else {
+    const todayIso = isoDate(new Date());
+    const todayIdx = scs.findIndex(sc => scCoversIso(sc, todayIso));
+    activeScIdx = todayIdx >= 0 ? todayIdx : scs.length - 1;
+  }
 
   buildScenarioChips();
   renderSidebar();
@@ -599,7 +723,7 @@ function setCentro(c) {
 }
 
 function buildScenarioChips() {
-  const scenarios = ALL_SCENARIOS[activeCentro] || [];
+  const scenarios = getActiveScenarios();
   const container = document.getElementById('scenarioChips');
   const navAreas = document.getElementById('areasScenarioNav');
   container.innerHTML = '';
@@ -622,8 +746,8 @@ function buildScenarioChips() {
       chip.textContent = label;
       chip.title = sc.label;
       if (i === activeScIdx) {
-        chip.style.background = CENTRO_COLORS[activeCentro];
-        chip.style.borderColor = CENTRO_COLORS[activeCentro];
+        chip.style.background = selectionColor();
+        chip.style.borderColor = selectionColor();
       }
       chip.onclick = () => setScenario(i);
       return chip;
@@ -642,7 +766,7 @@ function setScenario(idx) {
 }
 
 function renderSidebar() {
-  const scenarios = ALL_SCENARIOS[activeCentro] || [];
+  const scenarios = getActiveScenarios();
   const list = document.getElementById('scenarioList');
   list.innerHTML = '';
 
@@ -697,8 +821,8 @@ function renderSidebar() {
       }
     }
 
-    const color = CENTRO_COLORS[activeCentro];
-    if (origIdx === activeScIdx) item.style.setProperty('--accent', color);
+    const color = selectionColor();
+    if (origIdx === activeScIdx && !isMulti()) item.style.setProperty('--accent', color);
 
     item.innerHTML = `
       <div class="tl-dot"></div>
@@ -854,9 +978,9 @@ function fmtD(iso) {
 }
 
 
-function makePopupCentro(cp, color) {
+function makePopupCentro(cp, color, centro) {
   return `<div class="popup-cp">CP ${cp}</div>
-    <div style="font-size:11px;color:${color};font-weight:600;margin-bottom:2px">▶ ${activeCentro.toUpperCase()}</div>`;
+    <div style="font-size:11px;color:${color};font-weight:600;margin-bottom:2px">▶ ${(centro || activeCentro).toUpperCase()}</div>`;
 }
 
 function makePopupArea(cp, area, color, sc) {
@@ -875,15 +999,16 @@ function makePopupArea(cp, area, color, sc) {
 }
 
 async function renderMap() {
-  const sc = ALL_SCENARIOS[activeCentro]?.[activeScIdx];
+  const sc = getActiveScenario();
   if (!sc) return;
+  const token = ++_renderToken;
 
   clearMap1();
   hiddenAreas = new Set();
   document.getElementById('loadingMsg').style.display = 'block';
 
   const cpAreas = sc.cp_areas;
-  const centerColor = CENTRO_COLORS[activeCentro];
+  const centroOf = cp => sc.cp_centro?.[cp] || activeCentro;
   const allCPs = new Set(Object.keys(cpAreas));
 
   // Group by province
@@ -897,12 +1022,15 @@ async function renderMap() {
   const bounds = [];
   for (const prov of Object.keys(byProv)) {
     const geo = await getGeoJSON(prov);
+    if (token !== _renderToken) return;
     if (!geo) continue;
     const cpSet = new Set(byProv[prov]);
     geo.features.forEach(feat => {
       const raw = feat.properties?.COD_POSTAL || feat.properties?.cp || '';
       const cp = String(raw).padStart(5,'0');
       if (!cpSet.has(cp)) return;
+      const centro = centroOf(cp);
+      const centerColor = CENTRO_COLORS[centro];
       const lyr = L.geoJSON(feat, {
         style: { color:centerColor, weight:1.5, fillColor:centerColor, fillOpacity:0.65, opacity:0.75 },
         onEachFeature: (_f, layer) => {
@@ -910,7 +1038,7 @@ async function renderMap() {
             mouseover(e){ e.target.setStyle({weight:2.5, opacity:1, fillOpacity:0.85}); e.target.bringToFront(); },
             mouseout(e){ e.target.setStyle({color:centerColor, weight:1.5, fillColor:centerColor, fillOpacity:0.65, opacity:0.75}); },
             click(e){ L.popup().setLatLng(e.latlng)
-              .setContent(makePopupCentro(cp, centerColor))
+              .setContent(makePopupCentro(cp, centerColor, centro))
               .openOn(leafletMap); }
           });
         }
@@ -929,17 +1057,20 @@ async function renderMap() {
 
 function renderLegendCentro(sc) {
   const legend = document.getElementById('legend');
-  const color = CENTRO_COLORS[activeCentro];
+  const items = activeCentros.map(c =>
+    `<div class="legend-item"><div class="legend-dot" style="background:${CENTRO_COLORS[c]}"></div><span>${c.toUpperCase()}</span></div>`
+  ).join('');
   legend.innerHTML = `
-    <span class="legend-muted">CENTRO:</span>
-    <div class="legend-item"><div class="legend-dot" style="background:${color}"></div><span>${activeCentro.toUpperCase()}</span></div>
+    <span class="legend-muted">${isMulti() ? 'CENTROS:' : 'CENTRO:'}</span>
+    ${items}
     <span class="legend-muted" style="margin-left:8px">${Object.keys(sc.cp_areas).length} CPs · ${fmtD(sc.from)} – ${fmtD(sc.to)}</span>
   `;
 }
 
 async function renderMapAreas() {
-  const sc = ALL_SCENARIOS[activeCentro]?.[activeScIdx];
+  const sc = getActiveScenario();
   if (!sc) return;
+  const token = ++_renderToken;
 
   clearMap2();
   hiddenAreas = new Set();
@@ -947,7 +1078,7 @@ async function renderMapAreas() {
   if (masterCb) { masterCb.checked = true; masterCb.indeterminate = false; }
 
   const cpAreas = sc.cp_areas;
-  const areaColors = getAreaColors(activeCentro, sc.areas);
+  const areaColors = getAreaColors(colorKey(), sc.areas);
 
   const byProv = {};
   Object.keys(cpAreas).forEach(cp => {
@@ -959,6 +1090,7 @@ async function renderMapAreas() {
   const bounds = [];
   for (const prov of Object.keys(byProv)) {
     const geo = await getGeoJSON(prov);
+    if (token !== _renderToken) return;
     if (!geo) continue;
     const cpSet = new Set(byProv[prov]);
     geo.features.forEach(feat => {
@@ -975,7 +1107,7 @@ async function renderMapAreas() {
             mouseover(e){ e.target.setStyle({weight:2.5, opacity:1, fillOpacity:0.85}); e.target.bringToFront(); },
             mouseout(e){ e.target.setStyle({color:color, weight:1.5, fillColor:color, fillOpacity: hiddenAreas.has(area)?0:0.65, opacity: hiddenAreas.has(area)?0:0.75}); },
             click(e){ L.popup().setLatLng(e.latlng)
-              .setContent(makePopupArea(cp, area, color, ALL_SCENARIOS[activeCentro][activeScIdx]))
+              .setContent(makePopupArea(cp, area, color, getActiveScenario()))
               .openOn(leafletMap2); }
           });
         }
@@ -1006,7 +1138,7 @@ function renderAreasLegend(sc, areaColors) {
   const overlayTitle = document.getElementById('mapOverlayLegendTitle');
   if (overlayEl && overlayRows) {
     overlayRows.innerHTML = '';
-    if (overlayTitle) overlayTitle.textContent = `${activeCentro.toUpperCase()} · ${sc.areas.length} áreas`;
+    if (overlayTitle) overlayTitle.textContent = `${selectionLabel()} · ${sc.areas.length} áreas`;
     sc.areas.forEach(area => {
       const color = areaColors[area] || '#4a5068';
       const row = document.createElement('div');
@@ -1038,9 +1170,14 @@ function renderAreasLegend(sc, areaColors) {
     ).join('');
 
     item.style.borderLeft = `3px solid ${color}`;
+    const areaCentro = sc.area_centro?.[area];
+    const centroBadge = areaCentro
+      ? `<span class="area-centro-badge" style="background:${CENTRO_COLORS[areaCentro]}">${areaCentro.toUpperCase()}</span>`
+      : '';
     item.innerHTML = `
       <div class="area-header">
         <div class="mareas-legend-dot" style="background:${color};cursor:pointer" title="Cambiar color" data-area="${area}"></div>
+        ${centroBadge}
         <span class="mareas-legend-name">${area}</span>
         <span class="mareas-legend-count" style="margin-right:4px">${cps.length} CPs</span>
         <label class="area-toggle" title="Mostrar/ocultar área">
@@ -1112,7 +1249,7 @@ function filterAreas(q) {
 }
 
 function toggleAllAreas(visible) {
-  const sc = ALL_SCENARIOS[activeCentro]?.[activeScIdx];
+  const sc = getActiveScenario();
   if (!sc) return;
   sc.areas.forEach(area => {
     const item = document.querySelector(`#mareasLegend .mareas-legend-item[data-area="${area}"]`);
@@ -1123,7 +1260,7 @@ function toggleAllAreas(visible) {
 function syncMasterToggle() {
   const cb = document.getElementById('masterAreaCb');
   if (!cb) return;
-  const sc = ALL_SCENARIOS[activeCentro]?.[activeScIdx];
+  const sc = getActiveScenario();
   if (!sc) return;
   const allHidden = sc.areas.every(a => hiddenAreas.has(a));
   const allVisible = sc.areas.every(a => !hiddenAreas.has(a));
@@ -1432,7 +1569,7 @@ function isValidHex(v){ return /^#[0-9a-f]{6}$/i.test(v); }
 function openColorPicker(dot, area) {
   closeColorPicker();
   activePickerDot = dot; activePickerArea = area;
-  const currentColor = areaColorCache[activeCentro]?.[area] || dot.style.background || '#4f8ef7';
+  const currentColor = areaColorCache[colorKey()]?.[area] || dot.style.background || '#4f8ef7';
   const hex = currentColor.startsWith('#') ? currentColor : rgbToHex(currentColor);
   [pickerH, pickerS, pickerL] = hexToHsl(hex);
 
@@ -1584,8 +1721,8 @@ function rgbToHex(rgb) {
 
 function applyColor(newColor) {
   if (!activePickerDot || !activePickerArea) return;
-  if (!areaColorCache[activeCentro]) areaColorCache[activeCentro] = {};
-  areaColorCache[activeCentro][activePickerArea] = newColor;
+  if (!areaColorCache[colorKey()]) areaColorCache[colorKey()] = {};
+  areaColorCache[colorKey()][activePickerArea] = newColor;
   activePickerDot.style.background = newColor;
   mapLayers2.forEach(l => {
     if (l._cpArea === activePickerArea) l.setStyle({fillColor:newColor, color:newColor});
@@ -1895,10 +2032,23 @@ async function selectSearchResult(idx) {
   document.getElementById('cpSearchInput').value = '';
   document.getElementById('cpSearchClear').style.display = 'none';
 
-  // Navigate to the right centro + scenario
-  const needCentroChange = r.centro !== activeCentro;
+  // Navigate to the right centro + scenario.
+  // Si el centro ya forma parte de una selección múltiple se mantiene la
+  // selección y se elige el periodo combinado que contiene ese escenario.
+  let targetIdx = r.scIdx;
+  const keepMulti = isMulti() && activeCentros.includes(r.centro);
+  if (keepMulti) {
+    const todayIso = isoDate(new Date());
+    const cands = _multiScenarios.map((sc, i) => ({sc, i})).filter(x => x.sc.parts[r.centro] === r.scIdx);
+    const pick = cands.find(x => scCoversIso(x.sc, todayIso)) || cands[0];
+    targetIdx = pick ? pick.i : activeScIdx;
+  }
+  const needCentroChange = !keepMulti && (isMulti() || r.centro !== activeCentro);
   if (needCentroChange) {
+    // Evita el render de setCentros: se renderiza abajo antes del flash
+    activeCentros = [r.centro];
     activeCentro = r.centro;
+    _multiScenarios = [];
     setMapViewLocked(false); // new centro → reset zoom
     const lbl = document.getElementById('centroDropdownLabel');
     const dd  = document.getElementById('centroDropdown');
@@ -1914,11 +2064,14 @@ async function selectSearchResult(idx) {
     document.getElementById('mareasCentroTitle').textContent = r.centro.toUpperCase();
   }
 
-  if (r.scIdx !== activeScIdx || needCentroChange) {
-    activeScIdx = r.scIdx;
+  if (targetIdx !== activeScIdx || needCentroChange) {
+    activeScIdx = targetIdx;
     buildScenarioChips();
     renderSidebar();
   }
+  const area = r.type === 'area'
+    ? (getActiveScenario()?.areaKeyOf?.[r.centro]?.[r.area] || r.area)
+    : null;
 
   // Render map and flash
   if (r.type === 'cp') {
@@ -1938,12 +2091,12 @@ async function selectSearchResult(idx) {
     } else {
       await renderMapAreas();
     }
-    flashArea(r.area);
+    flashArea(area);
   }
 }
 
 function flashArea(area) {
-  const sc = ALL_SCENARIOS[activeCentro]?.[activeScIdx];
+  const sc = getActiveScenario();
   if (!sc) return;
 
   // Collect bounds of all layers in this area
@@ -1960,7 +2113,7 @@ function flashArea(area) {
 
   // Flash all layers in area
   let flash = 0;
-  const color = getAreaColors(activeCentro, sc.areas)[area] || '#4f8ef7';
+  const color = getAreaColors(colorKey(), sc.areas)[area] || '#4f8ef7';
   const interval = setInterval(() => {
     mapLayers2.forEach(l => {
       if (l._cpArea !== area) return;
@@ -1998,15 +2151,16 @@ function flashCp(cp, layerMap, map) {
       }
     }, 220);
 
-    const sc = ALL_SCENARIOS[activeCentro]?.[activeScIdx];
+    const sc = getActiveScenario();
     if (sc) {
       const area  = sc.cp_areas?.[cp];
+      const centro = sc.cp_centro?.[cp] || activeCentro;
       const color = activeTab === 'mapareas'
-        ? (getAreaColors(activeCentro, sc.areas)[area] || '#4f8ef7')
-        : CENTRO_COLORS[activeCentro];
+        ? (getAreaColors(colorKey(), sc.areas)[area] || '#4f8ef7')
+        : CENTRO_COLORS[centro];
       const content = activeTab === 'mapareas'
         ? makePopupArea(cp, area, color, sc)
-        : makePopupCentro(cp, color);
+        : makePopupCentro(cp, color, centro);
       L.popup().setLatLng(bounds.getCenter()).setContent(content).openOn(map);
     }
   } catch(e) { console.warn('flashCp error', e); }
