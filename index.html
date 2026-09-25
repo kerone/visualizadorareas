@@ -72,6 +72,11 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
 .centro-option:hover .centro-option-solo{opacity:1}
 .centro-option-solo:hover{color:var(--text);border-color:var(--accent)}
 .centro-dropdown-footer{border-top:1px solid #2d3347;padding:6px 12px;font-family:'IBM Plex Mono',monospace;font-size:9px;color:#4a5568;letter-spacing:.03em}
+.colmena-pin{position:relative;width:34px;height:34px;border-radius:50%;background:#13161e;border:3px solid var(--pin);box-shadow:0 2px 8px rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center}
+.colmena-pin::after{content:'';position:absolute;bottom:-9px;left:50%;transform:translateX(-50%);border:6px solid transparent;border-top:7px solid var(--pin);border-bottom:0}
+.colmena-pin img{height:20px;width:auto}
+.colmena-pin-dot{width:12px;height:12px;border-radius:50%;background:var(--pin)}
+.colmena-pin-label{position:absolute;top:40px;left:50%;transform:translateX(-50%);white-space:nowrap;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;color:#fff;background:rgba(13,15,20,.85);border:1px solid var(--pin);border-radius:3px;padding:0 4px}
 .area-centro-badge{font-family:'IBM Plex Mono',monospace;font-size:8px;font-weight:600;padding:1px 4px;border-radius:2px;margin-right:4px;color:#fff;flex-shrink:0}
 .centro-label{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.05em;margin-right:4px}
 .scenario-chips{display:flex;gap:4px;align-items:center;margin-left:auto}
@@ -472,6 +477,24 @@ const CENTRO_COLORS = new Proxy({}, {
   get(_, key) { return genColor(key); },
   set(_, key, val) { CENTRO_COLORS_DYNAMIC[key] = val; return true; }
 });
+
+// ── COLMENAS (ubicación exacta de cada centro) ──────────────────────────────
+const COLMENAS = [
+  {code:"pan3", name:"AVDA. DE LA ILUSTRACIÓN", type:"panal", lat:36.5075, lng:-6.268646, street:"AV DE LA ILUSTRACIÓN 4", town:"Cádiz", cp:"11011", parent:"svq1", opening:"26/10/2007"},
+  {code:"pan2", name:"SALINAS DE PONIENTE", type:"panal", lat:36.61117, lng:-6.19944, street:"CL ALBERT EINSTEIN 13", town:"El Puerto de Santa María", cp:"11500", parent:"svq1", opening:"19/2/2010"},
+  {code:"mad3", name:"COLMENA VALLECAS", type:"hive", lat:40.3677, lng:-3.634534, street:"PG LA ATALAYUELA (PTE AGRUP. PARCELAS) S/N", town:"Madrid", cp:"28031", parent:"", opening:"11/6/2026"},
+  {code:"mad2", name:"MINICOLMENA MAD2", type:"hive", lat:40.39537, lng:-3.850278, street:"CL LABRADORES 1", town:"Boadilla del Monte", cp:"28660", parent:"", opening:"31/8/2023"},
+  {code:"mad1", name:"COLMENA GETAFE", type:"hive", lat:40.278407, lng:-3.683845, street:"CL SEVERO OCHOA 1", town:"Getafe", cp:"28906", parent:"", opening:"20/4/2020"},
+  {code:"bcn1", name:"COLMENA ZONA FRANCA", type:"hive", lat:41.324494, lng:2.130094, street:"CL 5 (POL. ZONA FRANCA BARCELONA) 4", town:"Barcelona", cp:"08040", parent:"", opening:"12/6/2019"},
+  {code:"svq1", name:"COLMENA SEVILLA", type:"hive", lat:37.430235, lng:-5.971712, street:"PARC. M. I.A.1 DEL SUS-DMN-05 HIGUERÓN S/N", town:"Sevilla", cp:"41015", parent:"", opening:"23/11/2022"},
+  {code:"vlc1", name:"COLMENA VALENCIA", type:"hive", lat:39.459032, lng:-0.40927, street:"CL DELS GREMIS, S/N (POL. VARA QUART) S/N", town:"València", cp:"46014", parent:"", opening:"21/5/2018"},
+  {code:"alc1", name:"COLMENA ALICANTE", type:"hive", lat:38.338509, lng:-0.531961, street:"CT DE OCAÑA 53", town:"Alacant/Alicante", cp:"03007", parent:"", opening:"27/5/2022"},
+  {code:"pmi1", name:"COLMENA MALLORCA", type:"hive", lat:39.572545, lng:2.688435, street:"CL CA NA VINAGRE S/N", town:"Palma", cp:"07007", parent:"", opening:"30/9/2027"},
+  {code:"bcn2", name:"COLMENA RIPOLLET", type:"hive", lat:41.490524, lng:2.165235, street:"AV RIU RIPOLL S/N", town:"Ripollet", cp:"08291", parent:"", opening:"31/12/2028"},
+  {code:"mlg1", name:"COLMENA MALAGA", type:"hive", lat:36.706635, lng:-4.519756, street:"PG TREVENEZ SEC. SUNS-T.1, PARC. I-1 S/N", town:"Málaga", cp:"29590", parent:"", opening:"3/6/2027"},
+  {code:"4892", name:"COLMENA TARRAGONA", type:"hive", lat:41.112626, lng:1.216052, street:"PG P.I. CAMI VELL DE SALOU 3", town:"Tarragona", cp:"43006", parent:"", opening:"31/12/2028"},
+  {code:"4893", name:"COLMENA VALENCIA 2", type:"hive", lat:39.51328, lng:-0.455843, street:"CL CIUDAD DE LIRIA (POL. FTE. PATERNA) 5", town:"Paterna", cp:"46988", parent:"", opening:"31/12/2028"},
+];
 
 // ── STATE ────────────────────────────────────────────────────────────────────
 let activeCentro = 'vlc1';       // primer centro seleccionado
@@ -962,6 +985,44 @@ function resetMapView() {
 }
 
 
+// ── PINES DE COLMENAS ─────────────────────────────────────────────────────────
+// Se pinta la colmena de cada centro seleccionado en sus coordenadas exactas.
+let colmenaGroup = null;
+
+function selectedColmenas() {
+  return COLMENAS.filter(c => activeCentros.includes(c.code));
+}
+
+function colmenaBounds() {
+  return selectedColmenas().map(c => L.latLngBounds([c.lat, c.lng], [c.lat, c.lng]));
+}
+
+function renderColmenas() {
+  if (colmenaGroup) { leafletMap.removeLayer(colmenaGroup); colmenaGroup = null; }
+  colmenaGroup = L.layerGroup().addTo(leafletMap);
+  selectedColmenas().forEach(c => {
+    const color = CENTRO_COLORS[c.code];
+    const icon = CENTRO_ICONS[c.code];
+    const inner = icon ? `<img src="${icon}">` : '<div class="colmena-pin-dot"></div>';
+    const marker = L.marker([c.lat, c.lng], {
+      icon: L.divIcon({
+        className: '',
+        html: `<div class="colmena-pin" style="--pin:${color}">${inner}<span class="colmena-pin-label">${c.code.toUpperCase()}</span></div>`,
+        iconSize: [34, 34],
+        iconAnchor: [17, 43],
+        popupAnchor: [0, -40]
+      }),
+      zIndexOffset: 1000,
+      title: c.name
+    }).bindPopup(`<div class="popup-cp">${c.name}</div>
+      <div style="font-size:11px;color:${color};font-weight:600;margin-bottom:4px">▶ ${c.code.toUpperCase()} · ${c.type === 'panal' ? 'Panal' : 'Colmena'}</div>
+      <div style="font-size:11px;color:#c8d0e0">${c.street}</div>
+      <div style="font-size:11px;color:#c8d0e0">${c.cp} ${c.town}</div>
+      <div style="font-size:10px;color:#8892a4;font-family:'IBM Plex Mono',monospace;margin-top:4px">${c.lat.toFixed(6)}, ${c.lng.toFixed(6)}</div>`);
+    colmenaGroup.addLayer(marker);
+  });
+}
+
 function clearMap1() {
   mapLayers1.forEach(l => { try { leafletMap.removeLayer(l); } catch{} });
   mapLayers1 = []; cpToLayer1 = {};
@@ -1050,6 +1111,8 @@ async function renderMap() {
   }
 
   document.getElementById('loadingMsg').style.display = 'none';
+  renderColmenas();
+  bounds.push(...colmenaBounds());
   if (bounds.length && !_mapViewLocked) leafletMap.fitBounds(bounds.reduce((a,b)=>a.extend(b)), {padding:[20,20]});
   renderLegendCentro(sc);
   addCpLabels(cpToLayer1, leafletMap, labelGroup1, '#ffffff', null);
@@ -1119,6 +1182,8 @@ async function renderMapAreas() {
     });
   }
 
+  renderColmenas();
+  bounds.push(...colmenaBounds());
   if (bounds.length && !_mapViewLocked) leafletMap2.fitBounds(bounds.reduce((a,b)=>a.extend(b)), {padding:[20,20]});
   renderAreasLegend(sc, areaColors);
   // build per-cp color map for labels
