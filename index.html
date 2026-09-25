@@ -510,8 +510,8 @@ const COLMENAS = [
 ];
 
 // ── STATE ────────────────────────────────────────────────────────────────────
-let activeCentro = 'vlc1';       // primer centro seleccionado
-let activeCentros = ['vlc1'];    // todos los centros seleccionados
+let activeCentro = null;         // primer centro seleccionado
+let activeCentros = [];          // todos los centros seleccionados (vacío al entrar)
 let activeScIdx = 0;
 let _multiScenarios = [];        // escenarios combinados cuando hay >1 centro
 let _renderToken = 0;            // descarta renders async obsoletos
@@ -531,8 +531,7 @@ window.addEventListener('DOMContentLoaded', () => {
     showLoadingOverlay(false);
     if (loaded) {
       buildCentroButtons();
-      const keys = Object.keys(ALL_SCENARIOS).sort();
-      if (keys.length > 0) setCentro(keys[0]);
+      setCentros([]); // se entra sin ningún centro seleccionado
     } else {
       showToast('⚠ No hay datos en JSONBin. Carga un CSV.');
     }
@@ -623,7 +622,6 @@ function selectCentroOption(c) {
 function toggleCentroOption(c) {
   let next;
   if (activeCentros.includes(c)) {
-    if (activeCentros.length === 1) return;
     next = activeCentros.filter(x => x !== c);
   } else {
     next = [...activeCentros, c];
@@ -723,16 +721,17 @@ function buildMultiScenarios(centros) {
 
 function setCentros(centros, scIdx) {
   centros = [...new Set(centros)].filter(c => ALL_SCENARIOS[c]).sort();
-  if (!centros.length) return;
   activeCentros = centros;
-  activeCentro = centros[0];
+  activeCentro = centros[0] || null;
   _multiScenarios = isMulti() ? buildMultiScenarios(centros) : [];
   setMapViewLocked(false); // new centro → always fit to its bounds
   // Update dropdown label + color
   const lbl = document.getElementById('centroDropdownLabel');
   const dd = document.getElementById('centroDropdown');
-  if (lbl) lbl.textContent = centros.length > 4 ? `${centros.length} centros` : selectionLabel();
-  if (dd) {
+  if (lbl) lbl.textContent = !centros.length ? '— seleccionar —'
+    : centros.length > 4 ? `${centros.length} centros` : selectionLabel();
+  if (dd && !centros.length) { dd.style.borderColor = ''; dd.style.boxShadow = ''; }
+  else if (dd) {
     const color = isMulti() ? '#4f8ef7' : CENTRO_COLORS[activeCentro];
     dd.style.borderColor = color;
     dd.style.boxShadow = color.startsWith('#') ? `0 0 0 1px ${color}44` : 'none';
@@ -741,8 +740,9 @@ function setCentros(centros, scIdx) {
   document.querySelectorAll('.centro-option').forEach(el => {
     el.classList.toggle('selected', activeCentros.includes(el.dataset.value));
   });
-  document.getElementById('centroTitle').textContent = selectionLabel();
-  document.getElementById('mareasCentroTitle').textContent = selectionLabel();
+  document.getElementById('centroTitle').textContent = selectionLabel() || '—';
+  document.getElementById('mareasCentroTitle').textContent = selectionLabel() || '—';
+  if (!centros.length) { activeScIdx = 0; clearSelectionView(); return; }
   // Auto-select the scenario that contains today
   const scs = getActiveScenarios();
   if (scIdx !== undefined && scs[scIdx]) activeScIdx = scIdx;
@@ -756,6 +756,24 @@ function setCentros(centros, scIdx) {
   renderSidebar();
   if (activeTab === 'mapa') renderMap();
   else renderMapAreas();
+}
+
+// Sin centros seleccionados: mapa y paneles vacíos
+function clearSelectionView() {
+  _renderToken++; // descarta renders en curso
+  clearMap1(); clearMap2();
+  if (labelGroup1.group) { leafletMap.removeLayer(labelGroup1.group); labelGroup1 = {}; }
+  if (labelGroup2.group) { leafletMap.removeLayer(labelGroup2.group); labelGroup2 = {}; }
+  if (colmenaGroup) { leafletMap.removeLayer(colmenaGroup); colmenaGroup = null; }
+  hiddenAreas = new Set();
+  document.getElementById('loadingMsg').style.display = 'none';
+  buildScenarioChips();
+  renderSidebar();
+  document.getElementById('legend').innerHTML = '<span class="legend-muted">Selecciona uno o varios centros en el desplegable CENTROS</span>';
+  document.getElementById('mareasLegend').innerHTML = '';
+  document.getElementById('mareasAreaCount').textContent = '';
+  document.getElementById('mapOverlayLegendRows').innerHTML = '';
+  document.getElementById('mapOverlayLegendTitle').textContent = 'ÁREAS';
 }
 
 function buildScenarioChips() {
@@ -1228,6 +1246,7 @@ async function renderMapAreas() {
   bounds.push(...colmenaBounds());
   if (bounds.length && !_mapViewLocked) leafletMap2.fitBounds(bounds.reduce((a,b)=>a.extend(b)), {padding:[20,20]});
   renderAreasLegend(sc, areaColors);
+  renderLegendCentro(sc);
   // build per-cp color map for labels
   addCpLabels(cpToLayer2, leafletMap, labelGroup2, '#ffffff', cpAreas);
 }
@@ -1538,10 +1557,8 @@ document.addEventListener('DOMContentLoaded', () => {
     geojsonCache = {};
     Object.keys(CENTRO_COLORS_DYNAMIC).forEach(k => delete CENTRO_COLORS_DYNAMIC[k]);
     buildCentroButtons();
-    const centroKeys = Object.keys(ALL_SCENARIOS).sort();
-    const firstCentro = centroKeys[0] || 'vlc1';
     // Wait a tick so DOM/map settle before rendering
-    setTimeout(() => { setCentro(firstCentro); }, 80);
+    setTimeout(() => { setCentros([]); }, 80);
     showToast('⟳ Guardando en JSONBin…');
     try {
       await saveToJSONBin(newData);
