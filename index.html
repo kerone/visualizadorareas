@@ -33,6 +33,23 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
 .main-view{position:relative}
 .main-view.panel-collapsed .sidebar,.main-view.panel-collapsed .mareas-sidebar{display:none!important}
 .map-overlay-legend-title{cursor:pointer;user-select:none}
+/* LÍNEA TEMPORAL horizontal */
+.timeline-bar{display:none;align-items:stretch;gap:6px;background:var(--bg2);border-bottom:1px solid var(--border);padding:6px 10px;flex-shrink:0}
+.timeline-bar.shown{display:flex}
+.tlb-nav{flex-shrink:0;width:26px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);border-radius:5px;cursor:pointer;font-size:9px;transition:all .15s}
+.tlb-nav:hover:not(:disabled){color:var(--text);border-color:var(--accent)}
+.tlb-nav:disabled{opacity:.3;cursor:default}
+.tlb-scroll{flex:1;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;scrollbar-color:#2d3347 transparent;scroll-behavior:smooth}
+.tlb-track{display:flex;align-items:stretch;min-width:100%;position:relative}
+.tlb-seg{position:relative;flex-shrink:0;display:flex;flex-direction:column;justify-content:center;gap:1px;padding:4px 8px 4px 9px;border:none;border-left:1px solid #2d3347;border-bottom:3px solid #2a2f3e;background:transparent;color:var(--muted);font-family:'IBM Plex Mono',monospace;text-align:left;cursor:pointer;transition:background .12s,color .12s;white-space:nowrap;overflow:hidden}
+.tlb-seg:first-child{border-left:none}
+.tlb-seg:hover{background:rgba(255,255,255,.04);color:var(--text)}
+.tlb-seg-dates{font-size:10px;font-weight:500}
+.tlb-seg-sub{font-size:8.5px;opacity:.7;letter-spacing:.02em}
+.tlb-seg.active{color:#fff;background:color-mix(in srgb,var(--tl-color) 22%,transparent);border-bottom-color:var(--tl-color)}
+.tlb-seg.today::after{content:'HOY';position:absolute;top:3px;right:4px;font-size:7.5px;font-weight:700;letter-spacing:.05em;color:#4ade80}
+.tlb-seg.today{border-bottom-color:#4ade80}
+.tlb-seg.today.active{border-bottom-color:var(--tl-color)}
 .map-overlay-legend.user-hidden{display:none!important}
 .map-overlay-legend.collapsed #mapOverlayLegendRows{display:none}
 .map-overlay-legend.collapsed .map-overlay-legend-title{margin-bottom:0;padding-bottom:0;border-bottom:none}
@@ -79,7 +96,6 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
 .centro-dropdown-footer{border-top:1px solid #2d3347;padding:6px 12px;font-family:'IBM Plex Mono',monospace;font-size:9px;color:#4a5568;letter-spacing:.03em}
 .area-centro-badge{font-family:'IBM Plex Mono',monospace;font-size:8px;font-weight:600;padding:1px 4px;border-radius:2px;margin-right:4px;color:#fff;flex-shrink:0}
 .centro-label{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.05em;margin-right:4px}
-.scenario-chips{display:flex;gap:4px;align-items:center;margin-left:auto}
 
 /* ── CP / ÁREA GLOBAL SEARCH ─────────────────────────────────────────────── */
 .cp-search-wrap{position:relative;display:flex;align-items:center;margin-left:10px}
@@ -124,9 +140,6 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
 /* Highlight flash on map */
 @keyframes cpFlash{0%{opacity:1}25%{opacity:.2}50%{opacity:1}75%{opacity:.2}100%{opacity:1}}
 .cp-highlight-flash{animation:cpFlash .5s ease 3}
-.sc-chip{padding:3px 10px;border-radius:3px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:10px;cursor:pointer;transition:all .12s;font-weight:500}
-.sc-chip:hover{color:var(--text);border-color:var(--muted)}
-.sc-chip.active{color:#fff;border-color:transparent}
 
 
 /* ── MAIN VIEW ── */
@@ -278,7 +291,6 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
   .cp-search-inner,.cp-search-input{width:100%}
   .cp-search-dropdown{min-width:0;width:min(320px,calc(100vw - 20px))}
   .panel-toggle-label{display:none}
-  .scenario-chips{order:10;width:100%;margin-left:0;overflow-x:auto;flex-wrap:nowrap}
   /* el panel pasa a ser un cajón sobre el mapa */
   .sidebar,.mareas-sidebar{position:absolute;top:0;right:0;bottom:0;width:min(320px,88vw);z-index:1100;box-shadow:-8px 0 30px rgba(0,0,0,.55)}
   .legend-dock{left:10px;bottom:44px;max-width:60vw;max-height:45%}
@@ -375,10 +387,16 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
     style="display:none;padding:0 10px;height:32px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;cursor:pointer;border-radius:5px;transition:all .15s;white-space:nowrap;display:none;align-items:center;gap:5px;letter-spacing:.03em">
     ⊙ reset zoom
   </button>
-  <div class="scenario-chips" id="scenarioChips" style="display:none"></div>
   <button class="panel-toggle-btn" id="panelToggleBtn" onclick="togglePanel()" title="Mostrar/ocultar panel lateral">
     <span class="panel-toggle-icon">▤</span><span class="panel-toggle-label">Ocultar panel</span>
   </button>
+</div>
+
+<!-- LÍNEA TEMPORAL DE ESCENARIOS -->
+<div class="timeline-bar" id="timelineBar">
+  <button class="tlb-nav" id="tlbPrev" onclick="stepScenario(-1)" title="Escenario anterior">◀</button>
+  <div class="tlb-scroll" id="tlbScroll"><div class="tlb-track" id="tlbTrack"></div></div>
+  <button class="tlb-nav" id="tlbNext" onclick="stepScenario(1)" title="Escenario siguiente">▶</button>
 </div>
 
 <!-- UNIFIED MAP -->
@@ -422,7 +440,6 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
         <span class="area-toggle-thumb"></span>
       </label>
     </div>
-    <div id="areasScenarioNav" style="display:flex;flex-wrap:wrap;gap:4px;padding:8px 10px;border-bottom:1px solid var(--border);flex-shrink:0"></div>
     <div class="mareas-legend" id="mareasLegend"></div>
   </div>
 </div>
@@ -793,37 +810,54 @@ function clearSelectionView() {
 
 function buildScenarioChips() {
   const scenarios = getActiveScenarios();
-  const container = document.getElementById('scenarioChips');
-  const navAreas = document.getElementById('areasScenarioNav');
-  container.innerHTML = '';
-  if (navAreas) navAreas.innerHTML = '';
+  const bar = document.getElementById('timelineBar');
+  const track = document.getElementById('tlbTrack');
+  track.innerHTML = '';
+  bar.classList.toggle('shown', scenarios.length > 1);
   if (scenarios.length <= 1) return;
-  function fmtShort(iso) {
-    if (!iso) return '…';
-    const [y,m,d] = iso.split('-');
-    return `${d}/${m}/${y.slice(2)}`;
-  }
+
+  const fmtDM = iso => { const [,m,d] = iso.split('-'); return `${d}/${m}`; };
+  const fmtY  = iso => iso.slice(2,4);
+  const days  = sc => (sc.from && sc.to)
+    ? Math.round((new Date(sc.to) - new Date(sc.from)) / 86400000) + 1 : null;
+  const todayIso = isoDate(new Date());
+  const color = isMulti() ? '#4f8ef7' : CENTRO_COLORS[activeCentro];
+  const onlyOneYear = new Set(scenarios.flatMap(sc => [sc.from, sc.to]).filter(Boolean).map(fmtY)).size <= 1;
+  const d = iso => onlyOneYear ? fmtDM(iso) : `${fmtDM(iso)}/${fmtY(iso)}`;
+
   scenarios.forEach((sc, i) => {
-    function makeChip() {
-      const chip = document.createElement('button');
-      chip.className = 'sc-chip' + (i === activeScIdx ? ' active' : '');
-      let label;
-      if (!sc.from && !sc.to) label = '2026';
-      else if (!sc.from) label = `→ ${fmtShort(sc.to)}`;
-      else if (!sc.to) label = `${fmtShort(sc.from)} →`;
-      else label = `${fmtShort(sc.from)} – ${fmtShort(sc.to)}`;
-      chip.textContent = label;
-      chip.title = sc.label;
-      if (i === activeScIdx) {
-        chip.style.background = selectionColor();
-        chip.style.borderColor = selectionColor();
-      }
-      chip.onclick = () => setScenario(i);
-      return chip;
-    }
-    container.appendChild(makeChip());
-    if (navAreas) navAreas.appendChild(makeChip());
+    const seg = document.createElement('button');
+    const n = days(sc);
+    seg.className = 'tlb-seg' + (i === activeScIdx ? ' active' : '') + (scCoversIso(sc, todayIso) ? ' today' : '');
+    seg.style.setProperty('--tl-color', color);
+    // Ancho proporcional a la duración (con mínimo legible); extremos abiertos fijos
+    seg.style.width = (n === 1 ? 72 : n ? Math.min(260, Math.max(108, 40 + n * 5)) : 104) + 'px';
+    let dates, sub;
+    if (!sc.from && !sc.to) { dates = 'Todo'; sub = ''; }
+    else if (!sc.from) { dates = `→ ${d(sc.to)}`; sub = 'hasta'; }
+    else if (!sc.to)   { dates = `${d(sc.from)} →`; sub = 'en adelante'; }
+    else { dates = n === 1 ? d(sc.from) : `${d(sc.from)} – ${d(sc.to)}`; sub = `${n} día${n === 1 ? '' : 's'}`; }
+    seg.innerHTML = `<span class="tlb-seg-dates">${dates}</span><span class="tlb-seg-sub">${sub}</span>`;
+    seg.title = sc.label;
+    seg.onclick = () => setScenario(i);
+    track.appendChild(seg);
   });
+
+  document.getElementById('tlbPrev').disabled = activeScIdx <= 0;
+  document.getElementById('tlbNext').disabled = activeScIdx >= scenarios.length - 1;
+
+  // Centrar el escenario activo en la barra
+  requestAnimationFrame(() => {
+    const scroll = document.getElementById('tlbScroll');
+    const act = track.children[activeScIdx];
+    if (act) scroll.scrollLeft = act.offsetLeft - (scroll.clientWidth - act.offsetWidth) / 2;
+  });
+}
+
+function stepScenario(delta) {
+  const n = getActiveScenarios().length;
+  const idx = activeScIdx + delta;
+  if (idx >= 0 && idx < n) setScenario(idx);
 }
 
 function setScenario(idx) {
