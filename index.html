@@ -51,8 +51,10 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
 .tlb-seg.today:hover{background:rgba(74,222,128,.16)}
 .tlb-seg.today.active{background:rgba(74,222,128,.24);box-shadow:inset 0 0 0 1px #4ade80;border-bottom-color:#4ade80;color:#fff}
 .map-overlay-legend.empty{display:none!important}
-.map-overlay-legend-head{position:sticky;top:-10px;z-index:1;display:flex;align-items:center;gap:10px;margin:-10px -14px 8px;padding:10px 14px 6px;background:rgba(13,15,20,0.97);border-bottom:1px solid rgba(255,255,255,0.08)}
-.map-overlay-legend-head .map-overlay-legend-title{flex:1;margin:0;padding:0;border:none}
+.map-overlay-legend-head{position:sticky;top:-10px;z-index:1;display:flex;align-items:center;gap:8px;cursor:move;user-select:none;-webkit-user-select:none;touch-action:none;margin:-10px -14px 8px;padding:10px 14px 6px;background:rgba(13,15,20,0.97);border-bottom:1px solid rgba(255,255,255,0.08)}
+.map-overlay-legend-head .map-overlay-legend-title{flex:1;margin:0;padding:0;border:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.map-overlay-legend-grip{color:rgba(107,118,148,0.6);font-size:11px;line-height:1;flex-shrink:0}
+.map-overlay-legend.dragging{opacity:.88;box-shadow:0 8px 28px rgba(0,0,0,.8)}
 .map-overlay-legend.user-hidden #mapOverlayLegendRows{display:none}
 .map-overlay-legend.user-hidden .map-overlay-legend-head{margin-bottom:-10px;border-bottom:none}
 
@@ -406,7 +408,8 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
     <div class="legend" id="legend"></div>
     <!-- OVERLAY LEGEND (vista Áreas) -->
     <div class="map-overlay-legend empty" id="mapOverlayLegend">
-      <div class="map-overlay-legend-head">
+      <div class="map-overlay-legend-head" id="mapOverlayLegendHead" title="Arrastra para mover la leyenda · doble clic para devolverla a su sitio">
+        <span class="map-overlay-legend-grip">⠿</span>
         <div class="map-overlay-legend-title" id="mapOverlayLegendTitle">ÁREAS</div>
         <label class="area-toggle" title="Mostrar/ocultar la leyenda de áreas">
           <input type="checkbox" id="legendToggleCb" checked onchange="setLegendVisible(this.checked)">
@@ -1510,6 +1513,88 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 NARROW_MQ.addEventListener?.('change', e => setPanelCollapsed(e.matches));
+
+// ── LEYENDA ARRASTRABLE (igual que en el visualizador de centros) ────────────
+// Se mueve arrastrando la cabecera; la posición se guarda en el navegador y
+// doble clic en la cabecera la devuelve a su sitio (abajo a la izquierda).
+const LEGEND_POS_KEY = 'areasOverlayLegendPosV1';
+let _legendPos = null;          // {x,y} px relativos al área del mapa; null = posición por defecto
+
+function loadLegendPos() {
+  try {
+    const r = JSON.parse(localStorage.getItem(LEGEND_POS_KEY) || 'null');
+    _legendPos = (r && Number.isFinite(r.x) && Number.isFinite(r.y)) ? r : null;
+  } catch(_) { _legendPos = null; }
+}
+function saveLegendPos() {
+  try {
+    if (_legendPos) localStorage.setItem(LEGEND_POS_KEY, JSON.stringify(_legendPos));
+    else localStorage.removeItem(LEGEND_POS_KEY);
+  } catch(_) {}
+}
+function applyLegendPos() {
+  const el = document.getElementById('mapOverlayLegend');
+  const host = el?.parentElement;
+  const mapEl = document.getElementById('map');
+  if (!el || !host) return;
+  if (!_legendPos) { el.style.left = ''; el.style.top = ''; el.style.bottom = ''; return; }
+  let x = _legendPos.x, y = _legendPos.y;
+  if (el.offsetWidth) { // visible → siempre dentro del mapa
+    x = Math.min(Math.max(0, x), Math.max(0, host.clientWidth - el.offsetWidth - 4));
+    y = Math.min(Math.max(0, y), Math.max(0, mapEl.offsetTop + mapEl.offsetHeight - el.offsetHeight - 4));
+  }
+  el.style.left = Math.round(x) + 'px';
+  el.style.top = Math.round(y) + 'px';
+  el.style.bottom = 'auto';
+}
+function initLegendDrag() {
+  const el = document.getElementById('mapOverlayLegend');
+  const head = document.getElementById('mapOverlayLegendHead');
+  if (!el || !head) return;
+  const onSwitch = t => t.closest('.area-toggle');
+  let drag = null;
+  head.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0 || onSwitch(e.target)) return;
+    const r = el.getBoundingClientRect();
+    drag = { dx: e.clientX - r.left, dy: e.clientY - r.top };
+    try { head.setPointerCapture(e.pointerId); } catch(_) {}
+    el.classList.add('dragging');
+    e.preventDefault();
+  });
+  head.addEventListener('pointermove', (e) => {
+    if (!drag) return;
+    const hostR = el.parentElement.getBoundingClientRect();
+    _legendPos = { x: e.clientX - hostR.left - drag.dx, y: e.clientY - hostR.top - drag.dy };
+    applyLegendPos();
+  });
+  const end = () => {
+    if (!drag) return;
+    drag = null;
+    el.classList.remove('dragging');
+    applyLegendPos();
+    // se guarda la posición realmente mostrada (ya ajustada al mapa)
+    _legendPos = { x: parseFloat(el.style.left) || 0, y: parseFloat(el.style.top) || 0 };
+    saveLegendPos();
+  };
+  head.addEventListener('pointerup', end);
+  head.addEventListener('pointercancel', end);
+  head.addEventListener('dblclick', (e) => {
+    if (onSwitch(e.target)) return;
+    _legendPos = null; saveLegendPos(); applyLegendPos();
+    showToast('↺ Leyenda en su posición inicial');
+  });
+  // Reajustar si cambia el tamaño del mapa (ventana, panel, línea temporal)
+  // o de la propia leyenda (más áreas, plegar/desplegar)
+  if (window.ResizeObserver) {
+    const ro = new ResizeObserver(() => applyLegendPos());
+    ro.observe(el.parentElement); ro.observe(el);
+  } else {
+    window.addEventListener('resize', applyLegendPos);
+  }
+  loadLegendPos();
+  applyLegendPos();
+}
+document.addEventListener('DOMContentLoaded', initLegendDrag);
 
 // ── VIEW MODE TOGGLE ─────────────────────────────────────────────────────────
 function setViewMode(mode) {
