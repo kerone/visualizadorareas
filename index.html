@@ -33,6 +33,11 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
 .main-view{position:relative}
 .main-view.panel-collapsed .sidebar,.main-view.panel-collapsed .mareas-sidebar{display:none!important}
 .map-overlay-legend-title{cursor:pointer;user-select:none}
+.map-overlay-legend.user-hidden{display:none!important}
+.legend-toggle-wrap{display:none;align-items:center;gap:7px;margin-left:auto;flex-shrink:0;padding:0 10px;height:32px;border:1px solid var(--border);background:var(--bg3);border-radius:5px}
+.legend-toggle-wrap.shown{display:flex}
+.legend-toggle-wrap.shown + .panel-toggle-btn{margin-left:8px}
+.legend-toggle-label{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;color:var(--muted);letter-spacing:.03em}
 .map-overlay-legend.collapsed #mapOverlayLegendRows{display:none}
 .map-overlay-legend.collapsed .map-overlay-legend-title{margin-bottom:0;padding-bottom:0;border-bottom:none}
 
@@ -269,10 +274,12 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
   .centro-bar{height:auto;flex-wrap:wrap;padding:6px 10px;gap:6px}
   .centro-label{display:none}
   .centro-dropdown{min-width:0}
-  .cp-search-wrap{margin-left:0;flex:1 1 140px;min-width:0}
+  .cp-search-wrap{margin-left:0;flex:1 1 100px;min-width:0}
   .cp-search-inner,.cp-search-input{width:100%}
   .cp-search-dropdown{min-width:0;width:min(320px,calc(100vw - 20px))}
   .panel-toggle-label{display:none}
+  .legend-toggle-wrap{padding:0 8px}
+  .legend-toggle-label{display:none}
   .scenario-chips{order:10;width:100%;margin-left:0;overflow-x:auto;flex-wrap:nowrap}
   /* el panel pasa a ser un cajón sobre el mapa */
   .sidebar,.mareas-sidebar{position:absolute;top:0;right:0;bottom:0;width:min(320px,88vw);z-index:1100;box-shadow:-8px 0 30px rgba(0,0,0,.55)}
@@ -371,6 +378,14 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
     ⊙ reset zoom
   </button>
   <div class="scenario-chips" id="scenarioChips" style="display:none"></div>
+  <div class="legend-toggle-wrap" id="legendToggleWrap" title="Mostrar/ocultar la leyenda de áreas del mapa">
+    <span class="legend-toggle-label">LEYENDA</span>
+    <label class="area-toggle">
+      <input type="checkbox" id="legendToggleCb" checked onchange="setLegendVisible(this.checked)">
+      <span class="area-toggle-track"></span>
+      <span class="area-toggle-thumb"></span>
+    </label>
+  </div>
   <button class="panel-toggle-btn" id="panelToggleBtn" onclick="togglePanel()" title="Mostrar/ocultar panel lateral">
     <span class="panel-toggle-icon">▤</span><span class="panel-toggle-label">Ocultar panel</span>
   </button>
@@ -1440,6 +1455,20 @@ function togglePanel() {
   setPanelCollapsed(!document.getElementById('mainView').classList.contains('panel-collapsed'));
 }
 
+// Toggle de la leyenda de áreas (se recuerda en el navegador)
+const LEGEND_VISIBLE_KEY = 'areasLegendVisibleV1';
+function setLegendVisible(visible) {
+  document.getElementById('mapOverlayLegend').classList.toggle('user-hidden', !visible);
+  const cb = document.getElementById('legendToggleCb');
+  if (cb) cb.checked = visible;
+  try { localStorage.setItem(LEGEND_VISIBLE_KEY, visible ? '1' : '0'); } catch(_) {}
+}
+document.addEventListener('DOMContentLoaded', () => {
+  let saved = null;
+  try { saved = localStorage.getItem(LEGEND_VISIBLE_KEY); } catch(_) {}
+  if (saved === '0') setLegendVisible(false);
+});
+
 function toggleOverlayLegend() {
   document.getElementById('mapOverlayLegend').classList.toggle('collapsed');
 }
@@ -1465,6 +1494,7 @@ function setViewMode(mode) {
   // Hide overlay legend when switching to centros mode
   const overlayEl = document.getElementById('mapOverlayLegend');
   if (overlayEl) overlayEl.classList.toggle('visible', mode === 'areas');
+  document.getElementById('legendToggleWrap').classList.toggle('shown', mode === 'areas');
   // Clear ALL layers from both modes before re-rendering
   clearMap1();
   clearMap2();
