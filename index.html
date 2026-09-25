@@ -16,21 +16,25 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
 .app-content{display:flex;flex-direction:column;flex:1;overflow:hidden}
 
 /* LEFT NAV SIDEBAR */
-.left-nav{width:200px;background:#1a1d24;border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden;z-index:10}
-.left-nav-logo{padding:14px 16px 10px;border-bottom:1px solid var(--border);flex-shrink:0}
-.left-nav-logo-text{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;color:var(--accent);letter-spacing:.06em;white-space:nowrap}
-.left-nav-section{padding:14px 12px 6px;font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;color:var(--muted);letter-spacing:.1em;text-transform:uppercase}
-.left-nav-item{display:flex;align-items:center;gap:10px;padding:9px 14px;margin:1px 8px;border-radius:6px;cursor:pointer;transition:all .15s;font-family:'IBM Plex Sans',sans-serif;font-size:13px;color:var(--muted);user-select:none;border:1px solid transparent}
-.left-nav-item:hover{background:rgba(255,255,255,.05);color:var(--text)}
-.left-nav-item.active{background:rgba(79,142,247,.12);color:#fff;border-color:rgba(79,142,247,.25)}
-.left-nav-item.active .left-nav-icon{color:var(--accent)}
-.left-nav-icon{font-size:16px;flex-shrink:0;width:18px;text-align:center;color:var(--muted)}
-.left-nav-item.active .left-nav-icon{color:var(--accent)}
-.left-nav-divider{height:1px;background:var(--border);margin:8px 12px}
-.left-nav-bottom{margin-top:auto;padding:10px 8px;border-top:1px solid var(--border)}
 
 /* APP SHELL */
 .app-shell{display:flex;flex:1;overflow:hidden}
+/* VIEW TOGGLE (Centro | Áreas) en la barra superior */
+.view-toggle{display:flex;gap:2px;margin-left:20px;padding:3px;background:var(--bg3);border:1px solid var(--border);border-radius:7px}
+.view-toggle-btn{display:flex;align-items:center;gap:6px;padding:0 12px;height:28px;border:1px solid transparent;border-radius:5px;background:transparent;color:var(--muted);font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;white-space:nowrap}
+.view-toggle-btn:hover{color:var(--text)}
+.view-toggle-btn.active{background:rgba(79,142,247,.15);border-color:rgba(79,142,247,.35);color:#fff}
+.view-toggle-icon{font-size:13px;color:var(--muted)}
+.view-toggle-btn.active .view-toggle-icon{color:var(--accent)}
+/* PANEL LATERAL plegable */
+.panel-toggle-btn{margin-left:auto;flex-shrink:0;display:flex;align-items:center;gap:6px;padding:0 10px;height:32px;border:1px solid var(--border);background:var(--bg3);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;cursor:pointer;border-radius:5px;transition:all .15s;white-space:nowrap}
+.panel-toggle-btn:hover{color:var(--text);border-color:var(--accent)}
+.panel-toggle-icon{font-size:13px}
+.main-view{position:relative}
+.main-view.panel-collapsed .sidebar,.main-view.panel-collapsed .mareas-sidebar{display:none!important}
+.map-overlay-legend-title{cursor:pointer;user-select:none}
+.map-overlay-legend.collapsed #mapOverlayLegendRows{display:none}
+.map-overlay-legend.collapsed .map-overlay-legend-title{margin-bottom:0;padding-bottom:0;border-bottom:none}
 
 /* TOPBAR */
 .topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 20px;display:flex;align-items:center;gap:0;flex-shrink:0;height:48px}
@@ -254,17 +258,41 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
 .popup-cp{font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:600;margin-bottom:4px;color:#e2e8f0}
 .popup-area{font-size:11px;color:var(--muted)}
 .popup-area span{font-weight:600}
+/* ── PANTALLAS ESTRECHAS ── */
+@media (max-width: 800px){
+  .hide-sm{display:none}
+  .topbar{padding:0 10px}
+  .topbar-title{font-size:11px}
+  .view-toggle{margin-left:10px}
+  .view-toggle-btn{padding:0 9px}
+  .csv-btn{padding:0 10px}
+  .centro-bar{height:auto;flex-wrap:wrap;padding:6px 10px;gap:6px}
+  .centro-label{display:none}
+  .centro-dropdown{min-width:0}
+  .cp-search-wrap{margin-left:0;flex:1 1 140px;min-width:0}
+  .cp-search-inner,.cp-search-input{width:100%}
+  .cp-search-dropdown{min-width:0;width:min(320px,calc(100vw - 20px))}
+  .panel-toggle-label{display:none}
+  .scenario-chips{order:10;width:100%;margin-left:0;overflow-x:auto;flex-wrap:nowrap}
+  /* el panel pasa a ser un cajón sobre el mapa */
+  .sidebar,.mareas-sidebar{position:absolute;top:0;right:0;bottom:0;width:min(320px,88vw);z-index:1100;box-shadow:-8px 0 30px rgba(0,0,0,.55)}
+  .map-overlay-legend{left:10px;bottom:44px;max-width:60vw;max-height:45%}
+}
 </style>
 </head>
 <body>
 
 <div class="topbar">
-  <span class="topbar-title">VISUALIZADOR ÁREAS COLMENAS</span>
+  <span class="topbar-title"><span class="hide-sm">VISUALIZADOR </span>ÁREAS COLMENAS</span>
+  <div class="view-toggle" role="tablist" aria-label="Vista">
+    <button class="view-toggle-btn active" id="navCentro" onclick="setViewMode('centros')"><span class="view-toggle-icon">⬡</span>Centro</button>
+    <button class="view-toggle-btn" id="navAreas" onclick="setViewMode('areas')"><span class="view-toggle-icon">⬢</span>Áreas</button>
+  </div>
   <div class="topbar-spacer"></div>
   <nav class="topbar-nav">
     <div class="csv-group">
       <button class="csv-btn" onclick="openCsvModal()">
-        <span class="tab-icon">⬆</span> CARGAR CSV
+        <span class="tab-icon">⬆</span><span class="hide-sm"> CARGAR CSV</span>
       </button>
     </div>
   </nav>
@@ -272,19 +300,6 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
 
 <!-- APP SHELL: left nav + main content -->
 <div class="app-shell">
-
-<!-- LEFT NAV SIDEBAR -->
-<div class="left-nav">
-  <div class="left-nav-section">Vista</div>
-  <div class="left-nav-item active" id="navCentro" onclick="setViewMode('centros')">
-    <span class="left-nav-icon">⬡</span>
-    <span>Centro</span>
-  </div>
-  <div class="left-nav-item" id="navAreas" onclick="setViewMode('areas')">
-    <span class="left-nav-icon">⬢</span>
-    <span>Áreas</span>
-  </div>
-</div>
 
 <!-- MAIN CONTENT AREA -->
 <div class="app-content">
@@ -356,10 +371,13 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
     ⊙ reset zoom
   </button>
   <div class="scenario-chips" id="scenarioChips" style="display:none"></div>
+  <button class="panel-toggle-btn" id="panelToggleBtn" onclick="togglePanel()" title="Mostrar/ocultar panel lateral">
+    <span class="panel-toggle-icon">▤</span><span class="panel-toggle-label">Ocultar panel</span>
+  </button>
 </div>
 
 <!-- UNIFIED MAP -->
-<div class="main-view">
+<div class="main-view" id="mainView">
   <!-- MAP -->
   <div class="map-area">
     <div id="map"></div>
@@ -367,7 +385,7 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
     <div class="legend" id="legend"></div>
     <!-- OVERLAY LEGEND (vista Áreas) -->
     <div class="map-overlay-legend" id="mapOverlayLegend">
-      <div class="map-overlay-legend-title" id="mapOverlayLegendTitle">ÁREAS</div>
+      <div class="map-overlay-legend-title" id="mapOverlayLegendTitle" onclick="toggleOverlayLegend()" title="Plegar/desplegar leyenda">ÁREAS</div>
       <div id="mapOverlayLegendRows"></div>
     </div>
   </div>
@@ -1386,6 +1404,35 @@ function toggleArea(area, item, visible) {
 
   syncMasterToggle();
 }
+
+// ── PANEL LATERAL ─────────────────────────────────────────────────────────────
+const NARROW_MQ = window.matchMedia('(max-width: 800px)');
+
+function setPanelCollapsed(collapsed) {
+  const mv = document.getElementById('mainView');
+  mv.classList.toggle('panel-collapsed', collapsed);
+  const lbl = document.querySelector('#panelToggleBtn .panel-toggle-label');
+  if (lbl) lbl.textContent = collapsed ? 'Mostrar panel' : 'Ocultar panel';
+  // En pantalla ancha el mapa cambia de tamaño; en estrecha el panel va encima
+  setTimeout(() => { if (leafletMap) leafletMap.invalidateSize(); }, 30);
+}
+
+function togglePanel() {
+  setPanelCollapsed(!document.getElementById('mainView').classList.contains('panel-collapsed'));
+}
+
+function toggleOverlayLegend() {
+  document.getElementById('mapOverlayLegend').classList.toggle('collapsed');
+}
+
+// En móvil el panel y la leyenda empiezan plegados para dejar el mapa libre
+document.addEventListener('DOMContentLoaded', () => {
+  if (NARROW_MQ.matches) {
+    setPanelCollapsed(true);
+    document.getElementById('mapOverlayLegend').classList.add('collapsed');
+  }
+});
+NARROW_MQ.addEventListener?.('change', e => setPanelCollapsed(e.matches));
 
 // ── VIEW MODE TOGGLE ─────────────────────────────────────────────────────────
 function setViewMode(mode) {
