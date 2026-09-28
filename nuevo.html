@@ -133,6 +133,13 @@ button{font-family:inherit}
 .tlb-seg.today .tlb-circle{border:2px solid var(--accent);color:var(--accent-dark)}
 .tlb-seg.active .tlb-circle{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 3px 10px rgba(0,154,78,.3)}
 .tlb-seg.active .tlb-seg-sub{color:var(--text);font-weight:700}
+.tlb-fold .tlb-circle{border-style:dashed;border-color:var(--line);background:#f7f7f5;color:var(--muted)}
+.tlb-fold .tlb-day{font-size:13px;font-weight:700}
+.tlb-fold .tlb-mon{font-size:7.5px}
+.tlb-fold .tlb-seg-sub{color:var(--accent);font-weight:700}
+.tl-group-toggle{cursor:pointer;display:flex;align-items:center}
+.tl-group-toggle:hover{color:var(--text)}
+.tl-group-action{margin-left:auto;font-size:12px;font-weight:700;letter-spacing:0;text-transform:none;color:var(--accent)}
 
 /* Vista principal: mapa + paneles */
 .main-view{display:flex;flex:1;min-height:0;gap:10px;position:relative}
@@ -802,6 +809,8 @@ function clearSelectionView() {
   document.getElementById('mapOverlayLegend').classList.add('empty');
 }
 
+let _pastExpanded = false; // histórico desplegado en las cronologías
+
 function buildScenarioChips() {
   updatePageHeader();
   const scenarios = getActiveScenarios();
@@ -819,10 +828,31 @@ function buildScenarioChips() {
   const years = new Set(scenarios.flatMap(sc => [sc.from, sc.to]).filter(Boolean).map(i => i.slice(0,4)));
   const showYear = years.size > 1;
 
+  // Escenarios ya terminados: plegados en un solo círculo salvo que se
+  // desplieguen o el seleccionado sea uno de ellos
+  const pastIdx = scenarios.map((sc, i) => (sc.to && sc.to < todayIso) ? i : -1).filter(i => i >= 0);
+  const activePast = pastIdx.includes(activeScIdx);
+  const collapsed = pastIdx.length > 1 && !_pastExpanded && !activePast;
+  const fold = (label, mon, sub, onclick, title) => {
+    const b = document.createElement('button');
+    b.className = 'tlb-seg tlb-fold';
+    b.innerHTML = `<span class="tlb-top"></span><span class="tlb-circle"><span class="tlb-day">${label}</span><span class="tlb-mon">${mon}</span></span><span class="tlb-seg-sub">${sub}</span>`;
+    b.title = title; b.onclick = onclick;
+    return b;
+  };
+  if (collapsed) {
+    track.appendChild(fold(`+${pastIdx.length}`, 'ANTERIORES', 'ver histórico',
+      () => { _pastExpanded = true; buildScenarioChips(); renderSidebar(); }, 'Mostrar los escenarios anteriores a hoy'));
+  } else if (pastIdx.length > 1 && !activePast) {
+    track.appendChild(fold('−', 'OCULTAR', 'histórico',
+      () => { _pastExpanded = false; buildScenarioChips(); renderSidebar(); }, 'Plegar los escenarios anteriores a hoy'));
+  }
+
   scenarios.forEach((sc, i) => {
-    const seg = document.createElement('button');
     const isToday = scCoversIso(sc, todayIso);
     const isPast = !!(sc.to && sc.to < todayIso);
+    if (collapsed && isPast) return;
+    const seg = document.createElement('button');
     seg.className = 'tlb-seg' + (i === activeScIdx ? ' active' : '') + (isToday ? ' today' : '') + (isPast ? ' past' : '');
     let day, mon, subTxt;
     if (!sc.from && !sc.to) { day = '—'; mon = 'TODO'; subTxt = 'sin fechas'; }
@@ -845,7 +875,7 @@ function buildScenarioChips() {
 
   requestAnimationFrame(() => {
     const scroll = document.getElementById('tlbScroll');
-    const act = track.children[activeScIdx];
+    const act = track.querySelector('.tlb-seg.active');
     if (act) scroll.scrollLeft = act.offsetLeft - (scroll.clientWidth - act.offsetWidth) / 2;
   });
 }
@@ -907,6 +937,9 @@ function renderSidebar() {
   const timeline = document.createElement('div');
   timeline.className = 'timeline';
   let lastGroup = null;
+  const isPastSc = sc => !scCoversIso(sc, todayIso) && !(sc.from && sc.from > todayIso);
+  const pastCount = scenarios.filter(isPastSc).length;
+  const activePast = !!scenarios[activeScIdx] && isPastSc(scenarios[activeScIdx]);
 
   [...scenarios].reverse().forEach((sc, revI) => {
     const origIdx = scenarios.length - 1 - revI;
@@ -915,10 +948,17 @@ function renderSidebar() {
     if (group !== lastGroup) {
       const g = document.createElement('div');
       g.className = 'tl-group' + (isCurrent ? ' current' : '');
-      g.innerHTML = `<span class="tl-dot"></span>${group}`;
+      if (group === 'Histórico' && pastCount > 1 && !activePast) {
+        g.classList.add('tl-group-toggle');
+        g.innerHTML = `<span class="tl-dot"></span>${group} · ${pastCount}<span class="tl-group-action">${_pastExpanded ? '▾ Ocultar' : '▸ Mostrar'}</span>`;
+        g.onclick = () => { _pastExpanded = !_pastExpanded; renderSidebar(); buildScenarioChips(); };
+      } else {
+        g.innerHTML = `<span class="tl-dot"></span>${group}`;
+      }
       timeline.appendChild(g);
       lastGroup = group;
     }
+    if (group === 'Histórico' && pastCount > 1 && !activePast && !_pastExpanded) return;
 
     const item = document.createElement('div');
     const active = origIdx === activeScIdx;
