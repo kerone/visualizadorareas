@@ -244,7 +244,7 @@ button{font-family:inherit}
 
 /* Etiquetas CP en el mapa */
 .cp-map-label{font-size:10px;font-weight:600;text-align:center;white-space:nowrap;color:#44443f!important;text-shadow:0 0 2px #fff,0 0 3px #fff,0 0 5px rgba(255,255,255,.9);pointer-events:none}
-.leaflet-tile-pane{filter:saturate(.35) brightness(1.03);transition:filter .3s}
+.leaflet-tile-pane{filter:saturate(.12) brightness(1.05);transition:filter .3s}
 .zoomed-in .leaflet-tile-pane{filter:none}
 
 /* Popups */
@@ -518,7 +518,7 @@ async function saveToJSONBin(data) {
 }
 
 // ── PALETTE ─────────────────────────────────────────────────────────────────
-const AREA_PALETTE = ['#f2a65a','#9dbfe0','#a9cfb4','#eeb2bf','#efd27f','#b2a5d6','#8ecdc6','#e7a79b','#c7da9a','#d2bca0','#a6d3e6','#d4b3dd','#f6c28f','#7fb7a4','#e3c393','#b6c0e6'];
+const AREA_PALETTE = ['#f0923a','#5b9bd5','#6dbf8a','#e8788f','#e6c229','#9b7fd1','#3fb8b0','#e07a5f','#9ec54b','#b8926a','#5ac8e8','#c07fc9','#f3a95a','#2f9e7a','#d9a441','#7f8fd9'];
 
 // Áreas que se tocan: los CP vecinos comparten vértices en el GeoJSON
 function areaAdjacency(geos, cpAreas) {
@@ -1329,7 +1329,7 @@ function renderColmenas() {
 // Estilo de los polígonos según el zoom: con poco zoom el color manda; al
 // ampliar el relleno se vuelve casi transparente para ver calles y carreteras,
 // y el borde toma el color del área para seguir distinguiendo sus límites.
-const AREA_OP = 0.52;
+const AREA_OP = 0.6;
 let selectedArea = null; // área resaltada (clic en su nombre o en el buscador)
 function polyStyle(fill, base, area) {
   const z = leafletMap ? leafletMap.getZoom() : 8;
@@ -1337,12 +1337,15 @@ function polyStyle(fill, base, area) {
   // transparencia dejaban de distinguirse las áreas
   const k = z <= 9 ? 1 : z >= 11 ? 0.5 : 0.75;
   const hi = z >= 11;
+  // Borde en un tono oscuro del propio color: los CP de una misma área se funden
+  // y el límite entre áreas distintas se ve solo (el blanco troceaba las áreas)
+  const edge = hi ? shadeHex(fill, 0.3) : shadeHex(fill, 0.22);
   if (area && selectedArea) {
     // Seleccionada: color firme y borde grueso a cualquier zoom; el resto, atenuado
     if (area === selectedArea) return { fillColor: fill, fillOpacity: Math.max(base * k, 0.5), color: shadeHex(fill, 0.45), weight: 3.5, opacity: 1 };
-    return { fillColor: fill, fillOpacity: +(base * k * 0.45).toFixed(3), color: hi ? shadeHex(fill, 0.3) : '#ffffff', weight: hi ? 1.2 : 1, opacity: 0.7 };
+    return { fillColor: fill, fillOpacity: +(base * k * 0.45).toFixed(3), color: edge, weight: hi ? 1.2 : 0.8, opacity: 0.6 };
   }
-  return { fillColor: fill, fillOpacity: +(base * k).toFixed(3), color: hi ? shadeHex(fill, 0.3) : '#ffffff', weight: hi ? 1.8 : 1, opacity: 1 };
+  return { fillColor: fill, fillOpacity: +(base * k).toFixed(3), color: edge, weight: hi ? 1.8 : 0.8, opacity: hi ? 1 : 0.85 };
 }
 // Oscurece un color #rrggbb (para que el borde pastel se vea sobre el mapa gris)
 function shadeHex(c, amt) {
@@ -1469,18 +1472,18 @@ async function renderMap() {
       const centro = centroOf(cp);
       const centerColor = CENTRO_COLORS[centro];
       const lyr = L.geoJSON(feat, {
-        style: polyStyle(centerColor, 0.5),
+        style: polyStyle(centerColor, 0.6),
         onEachFeature: (_f, layer) => {
           layer.on({
             mouseover: hoverStyle,
-            mouseout(e){ e.target.setStyle(polyStyle(centerColor, 0.5)); },
+            mouseout(e){ e.target.setStyle(polyStyle(centerColor, 0.6)); },
             click(e){ L.popup().setLatLng(e.latlng)
               .setContent(makePopupCentro(cp, centerColor, centro))
               .openOn(leafletMap); }
           });
         }
       }).addTo(leafletMap);
-      lyr._fill = centerColor; lyr._base = 0.5;
+      lyr._fill = centerColor; lyr._base = 0.6;
       cpToLayer1[cp] = lyr;
       mapLayers1.push(lyr);
       try { bounds.push(lyr.getBounds()); } catch(e) {}
