@@ -228,7 +228,8 @@ button{font-family:inherit}
 
 /* Etiquetas CP en el mapa */
 .cp-map-label{font-size:10px;font-weight:600;text-align:center;white-space:nowrap;color:#44443f!important;text-shadow:0 0 2px #fff,0 0 3px #fff,0 0 5px rgba(255,255,255,.9);pointer-events:none}
-.leaflet-tile-pane{filter:saturate(.35) brightness(1.03)}
+.leaflet-tile-pane{filter:saturate(.35) brightness(1.03);transition:filter .3s}
+.zoomed-in .leaflet-tile-pane{filter:none}
 
 /* Popups */
 .leaflet-popup-content-wrapper{border-radius:12px!important;box-shadow:0 8px 28px rgba(0,0,0,.16)!important}
@@ -1018,7 +1019,9 @@ function initMaps() {
   leafletMap.on('movestart', (e) => {
     if (e.originalEvent) setMapViewLocked(true);
   });
-  leafletMap.on('zoomend', () => { mapLayers1.forEach(restyleLayer); mapLayers2.forEach(restyleLayer); });
+  const syncZoomClass = () => leafletMap.getContainer().classList.toggle('zoomed-in', leafletMap.getZoom() >= 11);
+  leafletMap.on('zoomend', () => { syncZoomClass(); mapLayers1.forEach(restyleLayer); mapLayers2.forEach(restyleLayer); });
+  syncZoomClass();
   leafletMap.on('zoomstart', (e) => {
     if (e.originalEvent) setMapViewLocked(true);
   });
@@ -1204,7 +1207,7 @@ function renderColmenas() {
 const AREA_OP = 0.52;
 function polyStyle(fill, base) {
   const z = leafletMap ? leafletMap.getZoom() : 8;
-  const k = z <= 9 ? 1 : z >= 13 ? 0.35 : 1 - (z - 9) * 0.1625;
+  const k = z <= 9 ? 1 : ({10: 0.75, 11: 0.5, 12: 0.3})[Math.round(z)] ?? 0.2;
   const hi = z >= 11;
   return { fillColor: fill, fillOpacity: +(base * k).toFixed(3), color: hi ? shadeHex(fill, 0.3) : '#ffffff', weight: hi ? 1.8 : 1, opacity: 1 };
 }
