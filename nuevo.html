@@ -1018,6 +1018,7 @@ function initMaps() {
   leafletMap.on('movestart', (e) => {
     if (e.originalEvent) setMapViewLocked(true);
   });
+  leafletMap.on('zoomend', () => { mapLayers1.forEach(restyleLayer); mapLayers2.forEach(restyleLayer); });
   leafletMap.on('zoomstart', (e) => {
     if (e.originalEvent) setMapViewLocked(true);
   });
@@ -1197,6 +1198,32 @@ function renderColmenas() {
   });
 }
 
+// Estilo de los polígonos según el zoom: con poco zoom el color manda; al
+// ampliar el relleno se vuelve casi transparente para ver calles y carreteras,
+// y el borde toma el color del área para seguir distinguiendo sus límites.
+const AREA_OP = 0.52;
+function polyStyle(fill, base) {
+  const z = leafletMap ? leafletMap.getZoom() : 8;
+  const k = z <= 9 ? 1 : z >= 13 ? 0.35 : 1 - (z - 9) * 0.1625;
+  const hi = z >= 11;
+  return { fillColor: fill, fillOpacity: +(base * k).toFixed(3), color: hi ? shadeHex(fill, 0.3) : '#ffffff', weight: hi ? 1.8 : 1, opacity: 1 };
+}
+// Oscurece un color #rrggbb (para que el borde pastel se vea sobre el mapa gris)
+function shadeHex(c, amt) {
+  if (!/^#[0-9a-f]{6}$/i.test(c)) return c;
+  const n = [1, 3, 5].map(i => Math.round(parseInt(c.slice(i, i + 2), 16) * (1 - amt)));
+  return '#' + n.map(v => v.toString(16).padStart(2, '0')).join('');
+}
+function restyleLayer(l) {
+  if (!l || !l._fill) return;
+  const hidden = l._cpArea && hiddenAreas.has(l._cpArea);
+  l.setStyle(hidden ? { fillOpacity: 0, opacity: 0 } : polyStyle(l._fill, l._base));
+}
+function hoverStyle(e) {
+  e.target.setStyle({ weight: 2.6, fillOpacity: Math.min(0.8, (e.target.options.fillOpacity || 0.5) + 0.22) });
+  e.target.bringToFront();
+}
+
 function clearMap1() {
   mapLayers1.forEach(l => { try { leafletMap.removeLayer(l); } catch{} });
   mapLayers1 = []; cpToLayer1 = {};
@@ -1267,17 +1294,18 @@ async function renderMap() {
       const centro = centroOf(cp);
       const centerColor = CENTRO_COLORS[centro];
       const lyr = L.geoJSON(feat, {
-        style: { color:'#ffffff', weight:1, fillColor:centerColor, fillOpacity:0.5, opacity:1 },
+        style: polyStyle(centerColor, 0.5),
         onEachFeature: (_f, layer) => {
           layer.on({
-            mouseover(e){ e.target.setStyle({weight:2.2, fillOpacity:0.92}); e.target.bringToFront(); },
-            mouseout(e){ e.target.setStyle({color:'#ffffff', weight:1, fillColor:centerColor, fillOpacity:0.5, opacity:1}); },
+            mouseover: hoverStyle,
+            mouseout(e){ e.target.setStyle(polyStyle(centerColor, 0.5)); },
             click(e){ L.popup().setLatLng(e.latlng)
               .setContent(makePopupCentro(cp, centerColor, centro))
               .openOn(leafletMap); }
           });
         }
       }).addTo(leafletMap);
+      lyr._fill = centerColor; lyr._base = 0.5;
       cpToLayer1[cp] = lyr;
       mapLayers1.push(lyr);
       try { bounds.push(lyr.getBounds()); } catch(e) {}
@@ -1337,12 +1365,12 @@ async function renderMapAreas() {
       const area = cpAreas[cp];
       const color = areaColors[area] || '#4a5068';
       const lyr = L.geoJSON(feat, {
-        style: { color:'#ffffff', weight:1, fillColor:color, fillOpacity:0.52, opacity:1 },
+        style: polyStyle(color, AREA_OP),
         onEachFeature: (_f, layer) => {
           layer._cpArea = area;
           layer.on({
-            mouseover(e){ e.target.setStyle({weight:2.2, fillOpacity:0.92}); e.target.bringToFront(); },
-            mouseout(e){ e.target.setStyle({color:'#ffffff', weight:1, fillColor:color, fillOpacity: hiddenAreas.has(area)?0:0.52, opacity: hiddenAreas.has(area)?0:1}); },
+            mouseover: hoverStyle,
+            mouseout(e){ e.target.setStyle(hiddenAreas.has(area) ? {fillOpacity:0, opacity:0} : polyStyle(areaColors[area] || color, AREA_OP)); },
             click(e){ L.popup().setLatLng(e.latlng)
               .setContent(makePopupArea(cp, area, color, getActiveScenario()))
               .openOn(leafletMap2); }
@@ -1350,6 +1378,7 @@ async function renderMapAreas() {
         }
       }).addTo(leafletMap2);
       lyr._cpArea = area;
+      lyr._fill = color; lyr._base = AREA_OP;
       cpToLayer2[cp] = lyr;
       mapLayers2.push(lyr);
       try { bounds.push(lyr.getBounds()); } catch(e) {}
@@ -1461,7 +1490,7 @@ function renderAreasLegend(sc, areaColors) {
             // Brief flash highlight
             const origStyle = {fillOpacity: hiddenAreas.has(area) ? 0 : 0.65};
             lyr.setStyle({fillOpacity:1, weight:3});
-            setTimeout(() => lyr.setStyle({fillOpacity: hiddenAreas.has(area)?0:0.52, weight:1}), 800);
+            setTimeout(() => restyleLayer(lyr), 800);
           } catch(_) {}
         }
       };
@@ -1524,7 +1553,7 @@ function toggleArea(area, item, visible) {
   if (cb) cb.checked = visible;
 
   mapLayers2.forEach(l => {
-    if (l._cpArea === area) l.setStyle({fillOpacity: hiddenAreas.has(area) ? 0 : 0.52, opacity: hiddenAreas.has(area) ? 0 : 1});
+    if (l._cpArea === area) restyleLayer(l);
   });
   const isHidden = hiddenAreas.has(area);
   Object.entries(cpLabelMarkers2).forEach(([cp, marker]) => {
@@ -2088,7 +2117,7 @@ function applyColor(newColor) {
   areaColorCache[colorKey()][activePickerArea] = newColor;
   activePickerDot.style.background = newColor;
   mapLayers2.forEach(l => {
-    if (l._cpArea === activePickerArea) l.setStyle({fillColor:newColor});
+    if (l._cpArea === activePickerArea) { l._fill = newColor; restyleLayer(l); }
   });
   // Sync overlay legend swatch
   const overlayRow = document.querySelector(`#mapOverlayLegendRows .map-overlay-legend-row[data-area="${activePickerArea}"]`);
@@ -2481,13 +2510,13 @@ function flashArea(area) {
     mapLayers2.forEach(l => {
       if (l._cpArea !== area) return;
       if (flash % 2 === 0) l.setStyle({fillColor:'#ffffff', color:'#ffffff', fillOpacity:.9, weight:3});
-      else                  l.setStyle({fillColor:color, color:'#ffffff', fillOpacity:.52, weight:1});
+      else                  restyleLayer(l);
     });
     flash++;
     if (flash >= 6) {
       clearInterval(interval);
       mapLayers2.forEach(l => {
-        if (l._cpArea === area) l.setStyle({fillColor:color, color:'#ffffff', fillOpacity:.52, weight:1});
+        if (l._cpArea === area) restyleLayer(l);
       });
     }
   }, 220);
@@ -2507,11 +2536,11 @@ function flashCp(cp, layerMap, map) {
     const origOp = lyr.options?.style?.fillOpacity ?? 0.52;
     const interval = setInterval(() => {
       if (flash % 2 === 0) lyr.setStyle({fillColor:'#ffffff', color:'#ffffff', fillOpacity:.9, weight:3});
-      else                  lyr.setStyle({fillColor:origFill, color:origStroke, fillOpacity:origOp, weight:1});
+      else                  restyleLayer(lyr);
       flash++;
       if (flash >= 6) {
         clearInterval(interval);
-        lyr.setStyle({fillColor:origFill, color:origStroke, fillOpacity:origOp, weight:1});
+        restyleLayer(lyr);
       }
     }, 220);
 
