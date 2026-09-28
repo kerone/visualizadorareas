@@ -1012,6 +1012,13 @@ function renderSidebar() {
 function initMaps() {
   leafletMap = L.map('map', {zoomControl:true, attributionControl:false}).setView([39.5, -3], 6);
   L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',{attribution:'© Google',maxZoom:18}).addTo(leafletMap);
+  // Capa transparente solo con carreteras y nombres de poblaciones, por encima
+  // de las áreas, para ver bien qué abarca cada una sin perder los colores
+  leafletMap.createPane('labels');
+  const labelsPane = leafletMap.getPane('labels');
+  labelsPane.style.zIndex = 450;            // encima de los polígonos (400), debajo de etiquetas CP y pines
+  labelsPane.style.pointerEvents = 'none';  // no bloquea clics en las áreas
+  L.tileLayer('https://mt1.google.com/vt/lyrs=h&x={x}&y={y}&z={z}',{pane:'labels',maxZoom:18,opacity:.85}).addTo(leafletMap);
   leafletMap2 = leafletMap; // same map for both modes
 
   // Lock view when user pans or zooms manually (originalEvent present = user gesture)
@@ -1337,12 +1344,12 @@ async function renderMapAreas() {
       const area = cpAreas[cp];
       const color = areaColors[area] || '#4a5068';
       const lyr = L.geoJSON(feat, {
-        style: { color:'#ffffff', weight:1, fillColor:color, fillOpacity:0.82, opacity:1 },
+        style: { color:'#ffffff', weight:1, fillColor:color, fillOpacity:0.7, opacity:1 },
         onEachFeature: (_f, layer) => {
           layer._cpArea = area;
           layer.on({
             mouseover(e){ e.target.setStyle({weight:2.2, fillOpacity:0.92}); e.target.bringToFront(); },
-            mouseout(e){ e.target.setStyle({color:'#ffffff', weight:1, fillColor:color, fillOpacity: hiddenAreas.has(area)?0:0.82, opacity: hiddenAreas.has(area)?0:1}); },
+            mouseout(e){ e.target.setStyle({color:'#ffffff', weight:1, fillColor:color, fillOpacity: hiddenAreas.has(area)?0:0.7, opacity: hiddenAreas.has(area)?0:1}); },
             click(e){ L.popup().setLatLng(e.latlng)
               .setContent(makePopupArea(cp, area, color, getActiveScenario()))
               .openOn(leafletMap2); }
@@ -1461,7 +1468,7 @@ function renderAreasLegend(sc, areaColors) {
             // Brief flash highlight
             const origStyle = {fillOpacity: hiddenAreas.has(area) ? 0 : 0.65};
             lyr.setStyle({fillOpacity:1, weight:3});
-            setTimeout(() => lyr.setStyle({fillOpacity: hiddenAreas.has(area)?0:0.82, weight:1}), 800);
+            setTimeout(() => lyr.setStyle({fillOpacity: hiddenAreas.has(area)?0:0.7, weight:1}), 800);
           } catch(_) {}
         }
       };
@@ -1524,7 +1531,7 @@ function toggleArea(area, item, visible) {
   if (cb) cb.checked = visible;
 
   mapLayers2.forEach(l => {
-    if (l._cpArea === area) l.setStyle({fillOpacity: hiddenAreas.has(area) ? 0 : 0.82, opacity: hiddenAreas.has(area) ? 0 : 1});
+    if (l._cpArea === area) l.setStyle({fillOpacity: hiddenAreas.has(area) ? 0 : 0.7, opacity: hiddenAreas.has(area) ? 0 : 1});
   });
   const isHidden = hiddenAreas.has(area);
   Object.entries(cpLabelMarkers2).forEach(([cp, marker]) => {
@@ -2481,13 +2488,13 @@ function flashArea(area) {
     mapLayers2.forEach(l => {
       if (l._cpArea !== area) return;
       if (flash % 2 === 0) l.setStyle({fillColor:'#ffffff', color:'#ffffff', fillOpacity:.9, weight:3});
-      else                  l.setStyle({fillColor:color, color:'#ffffff', fillOpacity:.82, weight:1});
+      else                  l.setStyle({fillColor:color, color:'#ffffff', fillOpacity:.7, weight:1});
     });
     flash++;
     if (flash >= 6) {
       clearInterval(interval);
       mapLayers2.forEach(l => {
-        if (l._cpArea === area) l.setStyle({fillColor:color, color:'#ffffff', fillOpacity:.82, weight:1});
+        if (l._cpArea === area) l.setStyle({fillColor:color, color:'#ffffff', fillOpacity:.7, weight:1});
       });
     }
   }, 220);
@@ -2504,7 +2511,7 @@ function flashCp(cp, layerMap, map) {
     let flash = 0;
     const origFill = lyr.options?.style?.fillColor || lyr.options?.fillColor;
     const origStroke = '#ffffff';
-    const origOp = lyr.options?.style?.fillOpacity ?? 0.82;
+    const origOp = lyr.options?.style?.fillOpacity ?? 0.7;
     const interval = setInterval(() => {
       if (flash % 2 === 0) lyr.setStyle({fillColor:'#ffffff', color:'#ffffff', fillOpacity:.9, weight:3});
       else                  lyr.setStyle({fillColor:origFill, color:origStroke, fillOpacity:origOp, weight:1});
