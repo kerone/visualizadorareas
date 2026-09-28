@@ -146,6 +146,14 @@ button{font-family:inherit}
 .main-view.panel-collapsed .sidebar,.main-view.panel-collapsed .mareas-sidebar{display:none!important}
 .map-area{flex:1;min-width:0;display:flex;flex-direction:column;position:relative;padding:8px}
 #map{flex:1;border-radius:10px;overflow:hidden;border:1px solid var(--border);background:#e8eae6}
+.mareas-legend-item.selected{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.mareas-legend-item.selected .mareas-legend-name{color:var(--accent-dark)}
+.area-selected-chip{position:absolute;top:18px;left:62px;z-index:1000;display:none;align-items:center;gap:8px;height:32px;padding:0 6px 0 12px;background:rgba(255,255,255,.97);border:1px solid var(--accent);border-radius:8px;font-size:12px;color:var(--text);box-shadow:0 2px 8px rgba(0,0,0,.15);max-width:min(60%,420px)}
+.area-selected-chip.shown{display:flex}
+.view-centros .area-selected-chip{display:none!important}
+.area-selected-chip b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.area-selected-chip button{border:none;background:none;color:var(--muted);font-size:15px;cursor:pointer;padding:2px 6px;line-height:1;border-radius:6px}
+.area-selected-chip button:hover{background:var(--accent-soft);color:var(--accent-dark)}
 .map-reset{position:absolute;top:18px;right:18px;z-index:1000;height:32px!important;font-size:12px!important;box-shadow:0 2px 8px rgba(0,0,0,.15)}
 .loading-msg{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 22px;font-size:13px;color:var(--muted);z-index:1000;box-shadow:var(--shadow)}
 .legend{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:6px 4px 0;font-size:12px;flex-shrink:0}
@@ -406,6 +414,10 @@ button{font-family:inherit}
     <section class="map-area card">
       <button class="btn-ghost map-reset" id="resetZoomBtn" onclick="resetMapView()" title="Volver a ver todos los centros seleccionados" style="display:none">⊙ Reset zoom</button>
       <div id="map"></div>
+      <div class="area-selected-chip" id="areaSelectedChip" title="Área resaltada en el mapa">
+        <span class="card-sub">Área:</span><b id="areaSelectedName"></b>
+        <button onclick="selectArea(null)" title="Quitar selección (Esc)">✕</button>
+      </div>
       <div class="loading-msg" id="loadingMsg" style="display:none">Cargando mapa…</div>
       <div class="legend" id="legend"></div>
       <div class="map-overlay-legend empty" id="mapOverlayLegend">
@@ -824,6 +836,7 @@ function setCentros(centros, scIdx) {
   activeCentros = centros;
   activeCentro = centros[0] || null;
   _multiScenarios = isMulti() ? buildMultiScenarios(centros) : [];
+  selectedArea = null; updateAreaChip();
   setMapViewLocked(false); // new centro → always fit to its bounds
   // Update dropdown label + color
   const lbl = document.getElementById('centroDropdownLabel');
@@ -861,6 +874,7 @@ function setCentros(centros, scIdx) {
 // Sin centros seleccionados: mapa y paneles vacíos
 function clearSelectionView() {
   _renderToken++; // descarta renders en curso
+  selectedArea = null; updateAreaChip();
   clearMap1(); clearMap2();
   if (labelGroup1.group) { leafletMap.removeLayer(labelGroup1.group); labelGroup1 = {}; }
   if (labelGroup2.group) { leafletMap.removeLayer(labelGroup2.group); labelGroup2 = {}; }
@@ -1272,10 +1286,16 @@ function renderColmenas() {
 // ampliar el relleno se vuelve casi transparente para ver calles y carreteras,
 // y el borde toma el color del área para seguir distinguiendo sus límites.
 const AREA_OP = 0.52;
-function polyStyle(fill, base) {
+let selectedArea = null; // área resaltada (clic en su nombre o en el buscador)
+function polyStyle(fill, base, area) {
   const z = leafletMap ? leafletMap.getZoom() : 8;
   const k = z <= 9 ? 1 : ({10: 0.75, 11: 0.5, 12: 0.3})[Math.round(z)] ?? 0.2;
   const hi = z >= 11;
+  if (area && selectedArea) {
+    // Seleccionada: color firme y borde grueso a cualquier zoom; el resto, atenuado
+    if (area === selectedArea) return { fillColor: fill, fillOpacity: Math.max(base * k, 0.5), color: shadeHex(fill, 0.45), weight: 3.5, opacity: 1 };
+    return { fillColor: fill, fillOpacity: +(base * k * 0.45).toFixed(3), color: hi ? shadeHex(fill, 0.3) : '#ffffff', weight: hi ? 1.2 : 1, opacity: 0.7 };
+  }
   return { fillColor: fill, fillOpacity: +(base * k).toFixed(3), color: hi ? shadeHex(fill, 0.3) : '#ffffff', weight: hi ? 1.8 : 1, opacity: 1 };
 }
 // Oscurece un color #rrggbb (para que el borde pastel se vea sobre el mapa gris)
@@ -1287,8 +1307,47 @@ function shadeHex(c, amt) {
 function restyleLayer(l) {
   if (!l || !l._fill) return;
   const hidden = l._cpArea && hiddenAreas.has(l._cpArea);
-  l.setStyle(hidden ? { fillOpacity: 0, opacity: 0 } : polyStyle(l._fill, l._base));
+  l.setStyle(hidden ? { fillOpacity: 0, opacity: 0 } : polyStyle(l._fill, l._base, l._cpArea));
+  if (l._cpArea && l._cpArea === selectedArea) { try { l.bringToFront(); } catch(_) {} }
 }
+
+// ── ÁREA SELECCIONADA ────────────────────────────────────────────────────────
+// Al elegir un área (nombre en la lista o resultado del buscador) el mapa se
+// centra en ella y queda resaltada aunque se amplíe; ✕, Esc o volver a pulsar
+// su nombre quitan la selección.
+function updateAreaChip() {
+  const chip = document.getElementById('areaSelectedChip');
+  const name = document.getElementById('areaSelectedName');
+  if (!chip) return;
+  chip.classList.toggle('shown', !!selectedArea);
+  if (name) name.textContent = selectedArea || '';
+  document.querySelectorAll('#mareasLegend .mareas-legend-item').forEach(it =>
+    it.classList.toggle('selected', !!selectedArea && it.dataset.area === selectedArea));
+}
+function selectArea(area, opts = {}) {
+  if (area === selectedArea && !opts.reselect) area = null;
+  selectedArea = area;
+  mapLayers2.forEach(restyleLayer);
+  updateAreaChip();
+  if (!area) return;
+  const layers = mapLayers2.filter(l => l._cpArea === area);
+  const bounds = [];
+  layers.forEach(l => { try { bounds.push(l.getBounds()); } catch(_) {} });
+  if (bounds.length && opts.zoom !== false) {
+    setMapViewLocked(true);
+    leafletMap.fitBounds(bounds.reduce((a, b) => a.extend(b)), { padding: [40, 40], maxZoom: 13 });
+  }
+  // Parpadeo de llegada con el propio color del área
+  let flash = 0;
+  const iv = setInterval(() => {
+    if (selectedArea !== area) { clearInterval(iv); return; }
+    layers.forEach(l => flash % 2 === 0 ? l.setStyle({ fillOpacity: .85, weight: 5 }) : restyleLayer(l));
+    if (++flash >= 6) { clearInterval(iv); layers.forEach(restyleLayer); }
+  }, 220);
+}
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && selectedArea && !e.target.closest('input,textarea')) selectArea(null);
+});
 function hoverStyle(e) {
   e.target.setStyle({ weight: 2.6, fillOpacity: Math.min(0.8, (e.target.options.fillOpacity || 0.5) + 0.22) });
   e.target.bringToFront();
@@ -1448,7 +1507,7 @@ async function renderMapAreas() {
           layer._cpArea = area;
           layer.on({
             mouseover: hoverStyle,
-            mouseout(e){ e.target.setStyle(hiddenAreas.has(area) ? {fillOpacity:0, opacity:0} : polyStyle(areaColors[area] || color, AREA_OP)); },
+            mouseout(e){ e.target.setStyle(hiddenAreas.has(area) ? {fillOpacity:0, opacity:0} : polyStyle(areaColors[area] || color, AREA_OP, area)); },
             click(e){ L.popup().setLatLng(e.latlng)
               .setContent(makePopupArea(cp, area, color, getActiveScenario()))
               .openOn(leafletMap2); }
@@ -1466,8 +1525,11 @@ async function renderMapAreas() {
   renderColmenas();
   bounds.push(...colmenaBounds());
   if (bounds.length && !_mapViewLocked) leafletMap2.fitBounds(bounds.reduce((a,b)=>a.extend(b)), {padding:[20,20]});
+  if (selectedArea && !sc.areas.includes(selectedArea)) selectedArea = null;
   renderAreasLegend(sc, areaColors);
   renderLegendCentro(sc);
+  if (selectedArea) mapLayers2.forEach(restyleLayer);
+  updateAreaChip();
   // build per-cp color map for labels
   addCpLabels(cpToLayer2, leafletMap, labelGroup2, '#ffffff', cpAreas);
 }
@@ -1539,16 +1601,8 @@ function renderAreasLegend(sc, areaColors) {
     const dot = item.querySelector('.mareas-legend-dot');
     dot.onclick = (e) => { e.stopPropagation(); openColorPicker(dot, area); };
 
-    // Click area name → fit map to all CPs of that area
-    item.querySelector('.mareas-legend-name').onclick = (e) => {
-      e.stopPropagation();
-      const bounds = [];
-      mapLayers2.forEach(l => { if (l._cpArea === area) { try { bounds.push(l.getBounds()); } catch(_){} } });
-      if (bounds.length) {
-        setMapViewLocked(true);
-        leafletMap.fitBounds(bounds.reduce((a,b) => a.extend(b)), {padding:[40,40], maxZoom:13});
-      }
-    };
+    // Clic en el nombre → seleccionar el área (centrar y resaltar); otro clic la deselecciona
+    item.querySelector('.mareas-legend-name').onclick = (e) => { e.stopPropagation(); selectArea(area); };
 
     // Toggle switch → toggle visibility
     const cb = item.querySelector('.area-toggle-cb');
@@ -2567,38 +2621,7 @@ async function selectSearchResult(idx) {
 }
 
 function flashArea(area) {
-  const sc = getActiveScenario();
-  if (!sc) return;
-
-  // Collect bounds of all layers in this area
-  const bounds = [];
-  mapLayers2.forEach(l => {
-    if (l._cpArea === area) {
-      try { bounds.push(l.getBounds()); } catch(_){}
-    }
-  });
-  if (!bounds.length) return;
-
-  setMapViewLocked(true);
-  leafletMap2.fitBounds(bounds.reduce((a,b) => a.extend(b)), {padding:[50,50], maxZoom:13});
-
-  // Flash all layers in area
-  let flash = 0;
-  const color = getAreaColors(colorKey(), sc.areas)[area] || '#4f8ef7';
-  const interval = setInterval(() => {
-    mapLayers2.forEach(l => {
-      if (l._cpArea !== area) return;
-      if (flash % 2 === 0) l.setStyle({fillColor:'#ffffff', color:'#ffffff', fillOpacity:.9, weight:3});
-      else                  restyleLayer(l);
-    });
-    flash++;
-    if (flash >= 6) {
-      clearInterval(interval);
-      mapLayers2.forEach(l => {
-        if (l._cpArea === area) restyleLayer(l);
-      });
-    }
-  }, 220);
+  selectArea(area, { reselect: true });
 }
 
 function flashCp(cp, layerMap, map) {
