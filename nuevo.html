@@ -872,10 +872,8 @@ function updatePageHeader() {
   const sep = '<span class="sep">|</span>';
   if (cs.length === 1) {
     const c = cs[0], i = info(c);
-    title.textContent = i ? `${i.mcode} · ${c.toUpperCase()} ${titleCase(i.name)}` : c.toUpperCase();
-    meta.innerHTML = i
-      ? [i.zone, i.region, `${titleCase(i.street)}, ${i.cp} ${i.town}`].filter(Boolean).map(escHtml).join(sep)
-      : 'Sin datos de ubicación para este centro';
+    title.textContent = i ? `${c.toUpperCase()} · ${titleCase(i.name)}` : c.toUpperCase();
+    meta.textContent = i ? `${titleCase(i.street)}, ${i.cp} ${i.town}` : 'Sin datos de ubicación para este centro';
   } else {
     title.textContent = selectionLabel();
     meta.innerHTML = `${cs.length} centros${sep}` + cs.map(c => { const i = info(c); return escHtml(i ? titleCase(i.name) : c.toUpperCase()); }).join(', ');
