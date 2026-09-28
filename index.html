@@ -1289,7 +1289,10 @@ const AREA_OP = 0.52;
 let selectedArea = null; // área resaltada (clic en su nombre o en el buscador)
 function polyStyle(fill, base, area) {
   const z = leafletMap ? leafletMap.getZoom() : 8;
-  const k = z <= 9 ? 1 : ({10: 0.75, 11: 0.5, 12: 0.3})[Math.round(z)] ?? 0.2;
+  let k = z <= 9 ? 1 : ({10: 0.75, 11: 0.5, 12: 0.3})[Math.round(z)] ?? 0.2;
+  // Vista Centro: un solo color, así que basta con aclarar hasta el zoom 11 y
+  // mantener ahí el relleno (con más transparencia se perdía la referencia)
+  if (!area && activeTab === 'mapa') k = Math.max(k, 0.5);
   const hi = z >= 11;
   if (area && selectedArea) {
     // Seleccionada: color firme y borde grueso a cualquier zoom; el resto, atenuado
