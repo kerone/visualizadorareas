@@ -286,6 +286,11 @@ button{font-family:inherit}
 .csv-modal-overlay{display:none;position:fixed;inset:0;background:rgba(20,20,18,.45);z-index:10000;align-items:center;justify-content:center}
 .csv-modal-overlay.open{display:flex}
 .csv-modal-box{background:var(--card);border-radius:16px;width:480px;max-width:calc(100vw - 32px);overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.25)}
+.csv-modal-lock{padding:32px 32px 22px;text-align:center;border-bottom:1px solid var(--border)}
+.csv-lock-form{display:flex;gap:8px;justify-content:center;margin-top:4px}
+.csv-lock-input{height:36px;width:200px;border:1px solid var(--line);border-radius:8px;padding:0 12px;font:inherit;font-size:14px;outline:none}
+.csv-lock-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.csv-lock-error{min-height:18px;margin-top:8px;font-size:12px;color:#b42318;font-weight:600}
 .csv-modal-dropzone{padding:36px 32px 26px;text-align:center;cursor:pointer;border-bottom:1px solid var(--border);transition:background .15s}
 .csv-modal-dropzone:hover,.csv-modal-dropzone.drag-over{background:var(--accent-soft)}
 .csv-modal-icon{font-size:40px;margin-bottom:12px}
@@ -341,11 +346,18 @@ button{font-family:inherit}
 <!-- CSV UPLOAD MODAL -->
 <div class="csv-modal-overlay" id="csvModal" onclick="closeCsvModal(event)">
   <div class="csv-modal-box">
-    <div class="csv-modal-dropzone" id="csvDropzone">
+    <div class="csv-modal-lock" id="csvLock">
+      <div class="csv-modal-icon">🔒</div>
+      <div class="csv-modal-title">Introduce la contraseña para cargar un CSV</div>
+      <form class="csv-lock-form" onsubmit="event.preventDefault(); checkCsvPassword()">
+        <input type="password" id="csvPassword" class="csv-lock-input" placeholder="Contraseña" autocomplete="off">
+        <button type="submit" class="btn-primary">Entrar</button>
+      </form>
+      <div class="csv-lock-error" id="csvLockError"></div>
+    </div>
+    <div class="csv-modal-dropzone" id="csvDropzone" style="display:none">
       <div class="csv-modal-icon">🗂️</div>
       <div class="csv-modal-title">Arrastra el CSV aquí o haz clic para seleccionar</div>
-      <div class="csv-modal-hint">Formato esperado: <span class="csv-hint-code">active_from, active_to, area_name, postal_code, warehouse_code</span></div>
-      <div class="csv-modal-hint" style="margin-top:4px">Ejemplo: <span class="csv-hint-code">12/6/2026, mad1, 28002</span></div>
       <input type="file" id="csvInput" accept=".csv" style="display:none">
     </div>
     <div class="csv-modal-footer" style="gap:10px;flex-wrap:wrap;justify-content:center">
@@ -356,7 +368,7 @@ button{font-family:inherit}
         <button id="csvPreviewBtn" onclick="previewCsv()" class="btn-ghost" title="Cargar el CSV solo en este navegador para revisarlo; no se guarda nada">👁 Ver sin guardar</button>
         <button id="csvConfirmBtn" onclick="confirmApplyCsv()" class="btn-primary btn-danger-solid" title="Sustituye los datos guardados en JSONBin para todos">⚠ Guardar y machacar datos</button>
       </div>
-      <a class="metabase-btn" href="https://metabase.prod.monline/question/32891-areas-colmenas-26" target="_blank">
+      <a class="metabase-btn" href="https://metabase.prod.monline/question/34614-areas-centros-26" target="_blank">
         <span>📊</span> Query
       </a>
     </div>
@@ -1999,7 +2011,29 @@ let _previewMode = false;      // true mientras se ve un CSV sin guardar
 let _savedScenarios = null;    // copia de los datos guardados para poder volver
 document.addEventListener('DOMContentLoaded', () => {
   // Modal open/close
+  // Contraseña para cargar CSV (se recuerda mientras dure la pestaña)
+  const CSV_PASSWORD = 'vlc1';
+  function csvUnlocked() { try { return sessionStorage.getItem('csvUnlocked') === '1'; } catch(_) { return false; } }
+  function showCsvStep() {
+    const ok = csvUnlocked();
+    document.getElementById('csvLock').style.display = ok ? 'none' : '';
+    document.getElementById('csvDropzone').style.display = ok ? '' : 'none';
+    if (!ok) setTimeout(() => document.getElementById('csvPassword').focus(), 50);
+  }
+  window.checkCsvPassword = function() {
+    const inp = document.getElementById('csvPassword');
+    if (inp.value.trim() === CSV_PASSWORD) {
+      try { sessionStorage.setItem('csvUnlocked', '1'); } catch(_) {}
+      inp.value = ''; document.getElementById('csvLockError').textContent = '';
+      showCsvStep();
+    } else {
+      document.getElementById('csvLockError').textContent = 'Contraseña incorrecta';
+      inp.select();
+    }
+  };
   window.openCsvModal = function() {
+    document.getElementById('csvLockError').textContent = '';
+    showCsvStep();
     document.getElementById('csvModal').classList.add('open');
   };
   window.closeCsvModal = function(e) {
