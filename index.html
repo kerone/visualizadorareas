@@ -753,17 +753,11 @@ function renderCentroOptions(list) {
     check.className = 'centro-option-check';
     check.textContent = '✓';
     div.appendChild(check);
-    const dot = document.createElement('span');
-    dot.className = 'centro-option-dot';
-    dot.style.background = CENTRO_COLORS[c];
-    const icon = CENTRO_ICONS[c];
-    if (icon) {
-      const img = document.createElement('img');
-      img.src = icon; img.style.cssText = 'height:18px;width:auto';
-      div.appendChild(img);
-    } else {
-      div.appendChild(dot);
-    }
+    // Mismo dibujo que el pin del mapa: abeja del color del centro o pan para los panales
+    const img = document.createElement('img');
+    img.src = svgUrl(/^pan/.test(c) ? ICON_SVG_BREAD : ICON_SVG_BEE.replace(/\{c\}/g, CENTRO_COLORS[c]));
+    img.style.cssText = 'width:22px;height:22px;flex-shrink:0';
+    div.appendChild(img);
     const info = COLMENAS.find(x => x.code === c);
     const lbl = document.createElement('span');
     lbl.innerHTML = c.toUpperCase() + (info ? ` <span class="cp-search-sub" style="font-weight:500">· ${escHtml(titleCase(info.name))}</span>` : '');
