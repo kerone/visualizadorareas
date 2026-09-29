@@ -46,14 +46,6 @@ button{font-family:inherit}
 .view-toggle-btn.active::after{content:'';position:absolute;left:0;right:0;bottom:-1px;height:3px;border-radius:2px 2px 0 0;background:var(--text)}
 .view-toggle-icon{display:none}
 .toolbar{margin-left:auto;display:flex;align-items:center;gap:8px;padding-bottom:6px;min-width:0}
-.centro-label{font-size:12px;font-weight:600;color:var(--muted)}
-.centro-select-wrap{position:relative;display:flex;align-items:center}
-.centro-dropdown{height:34px;background:var(--card);border:1px solid var(--line);color:var(--text);font-size:13px;font-weight:600;padding:0 12px;border-radius:8px;cursor:pointer;min-width:190px;display:flex;align-items:center;justify-content:space-between;gap:10px;user-select:none;transition:border-color .15s}
-.centro-dropdown:hover{border-color:var(--text)}
-.centro-dropdown-arrow{color:var(--muted);font-size:11px}
-.centro-dropdown-menu{position:absolute;top:calc(100% + 6px);left:0;z-index:9999;background:var(--card);border:1px solid var(--border);border-radius:10px;box-shadow:0 10px 32px rgba(0,0,0,.14);width:260px;overflow:hidden}
-.centro-search-input{width:100%;border:none;border-bottom:1px solid var(--border);font:inherit;font-size:13px;padding:11px 14px;outline:none;color:var(--text)}
-.centro-search-input::placeholder{color:var(--faint)}
 .centro-dropdown-list{max-height:280px;overflow-y:auto;padding:4px 0}
 .centro-option{padding:8px 14px;font-size:13px;font-weight:600;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:10px}
 .centro-option:hover{background:#f6f6f4}
@@ -74,14 +66,21 @@ button{font-family:inherit}
 .btn-primary:hover{background:var(--accent-dark);border-color:var(--accent-dark)}
 
 /* Buscador */
-.cp-search-wrap{position:relative;display:flex;align-items:center}
-.cp-search-inner{position:relative;display:flex;align-items:center}
+.omni-wrap{position:relative;flex:1 1 auto;min-width:280px;max-width:600px}
+.omni-box{position:relative;display:flex;align-items:center;gap:6px;height:34px;padding:0 30px 0 34px;background:var(--card);border:1px solid var(--line);border-radius:8px;cursor:text;transition:border-color .15s,box-shadow .15s}
+.omni-box:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.omni-chips{display:flex;gap:4px;flex-shrink:0;max-width:65%;overflow:hidden}
+.omni-chip{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 4px 0 8px;border-radius:6px;background:#f2f2ef;border:1px solid var(--border);font-size:12px;font-weight:700;white-space:nowrap}
+.omni-chip-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.omni-chip button{border:none;background:none;color:var(--muted);cursor:pointer;font-size:12px;padding:0 3px;line-height:1;border-radius:4px}
+.omni-chip button:hover{color:#b42318;background:#fdecea}
+.omni-input{flex:1;min-width:90px;height:100%;border:none;outline:none;background:none;font:inherit;font-size:14px;color:var(--text)}
+.omni-input::placeholder{color:var(--faint)}
+.omni-sec-head{display:flex;align-items:center;gap:8px;padding-top:8px}
+.omni-sec-head span{font-weight:600;text-transform:none;letter-spacing:0;color:var(--faint)}
 .cp-search-icon{position:absolute;left:12px;color:var(--muted);pointer-events:none;display:flex}
-.cp-search-input{height:34px;background:var(--card);border:1px solid var(--line);color:var(--text);font:inherit;font-size:14px;padding:0 34px 0 36px;border-radius:8px;outline:none;width:230px;transition:border-color .15s,box-shadow .15s,width .2s}
-.cp-search-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);width:280px}
-.cp-search-input::placeholder{color:var(--faint)}
 .cp-search-clear{position:absolute;right:10px;background:none;border:none;color:var(--muted);font-size:15px;cursor:pointer;display:none;align-items:center}
-.cp-search-dropdown{position:absolute;top:calc(100% + 6px);right:0;z-index:9999;background:var(--card);border:1px solid var(--border);border-radius:10px;box-shadow:0 10px 32px rgba(0,0,0,.14);min-width:380px;max-height:360px;overflow-y:auto;display:none}
+.cp-search-dropdown{position:absolute;top:calc(100% + 6px);left:0;width:100%;z-index:9999;background:var(--card);border:1px solid var(--border);border-radius:10px;box-shadow:0 10px 32px rgba(0,0,0,.14);min-width:380px;max-height:460px;overflow-y:auto;display:none}
 .cp-search-section{padding:10px 14px 4px;font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
 .cp-search-item{padding:8px 14px;font-size:13px;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:9px}
 .cp-search-item:hover,.cp-search-item.selected{background:#f6f6f4}
@@ -304,11 +303,9 @@ button{font-family:inherit}
   .csv-btn{padding:0 12px}
   .tabs-row{margin:0 14px;flex-wrap:wrap;gap:0}
   .toolbar{order:-1;width:100%;margin:0;padding:0 0 8px;flex-wrap:nowrap;gap:6px}
-  .centro-label{display:none}
-  .centro-dropdown{min-width:0;padding:0 10px}
-  .cp-search-wrap{flex:1;min-width:0}
-  .cp-search-inner,.cp-search-input,.cp-search-input:focus{width:100%}
-  .cp-search-dropdown{min-width:0;width:calc(100vw - 28px);right:auto;left:0}
+  .omni-wrap{max-width:none;min-width:0}
+  .omni-chips{max-width:50%}
+  .cp-search-dropdown{min-width:0;width:calc(100vw - 28px)}
   .panel-toggle-label{display:none}
   .view-toggle-btn{padding:9px 12px 8px;font-size:14px}
   .content{padding:10px 14px 12px;gap:10px}
@@ -374,40 +371,37 @@ button{font-family:inherit}
     <button class="view-toggle-btn" id="navCentro" onclick="setViewMode('centros')"><span class="view-toggle-icon">⬡</span>Centro</button>
   </div>
   <div class="toolbar">
-    <span class="centro-label">Centros</span>
-    <div class="centro-select-wrap" id="centroDropdownWrap">
-      <div class="centro-dropdown" id="centroDropdown" onclick="toggleCentroDropdown()">
-        <span id="centroDropdownLabel">— seleccionar —</span>
-        <span class="centro-dropdown-arrow">▾</span>
-      </div>
-      <div class="centro-dropdown-menu" id="centroDropdownMenu" style="display:none">
-        <input type="text" class="centro-search-input" id="centroSearchInput" placeholder="Buscar centro…" oninput="filterCentros(this.value)" onclick="event.stopPropagation()">
-        <div class="centro-option centro-option-all" id="centroOptionAll" onclick="event.stopPropagation(); toggleAllCentroOptions()">
-          <span class="centro-option-check">✓</span><span>(Seleccionar todo)</span>
-        </div>
-        <div class="centro-dropdown-list" id="centroDropdownList"></div>
-        <div class="centro-dropdown-footer">
-          <span class="centro-dropdown-count" id="centroDropdownCount"></span>
-          <button class="btn-ghost btn-sm" onclick="event.stopPropagation(); closeCentroDropdown()">Cancelar</button>
-          <button class="btn-primary btn-sm" onclick="event.stopPropagation(); applyCentroDropdown()">Aceptar</button>
-        </div>
-      </div>
-    </div>
-    <div class="cp-search-wrap" id="cpSearchWrap">
-      <div class="cp-search-inner">
+    <div class="omni-wrap" id="omniWrap">
+      <div class="omni-box" onclick="document.getElementById('cpSearchInput').focus(); openOmni()">
         <span class="cp-search-icon">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="22" y2="22"/></svg>
         </span>
-        <input type="text" class="cp-search-input" id="cpSearchInput"
-          placeholder="Buscar CP o área…"
+        <div class="omni-chips" id="omniChips"></div>
+        <input type="text" class="omni-input" id="cpSearchInput"
+          placeholder="Buscar centro, CP o área…"
           maxlength="40"
           oninput="onCpSearchInput(this.value)"
           onkeydown="onCpSearchKeydown(event)"
-          onclick="event.stopPropagation()"
+          onfocus="openOmni()"
+          onclick="event.stopPropagation(); openOmni()"
           autocomplete="off">
-        <button class="cp-search-clear" id="cpSearchClear" onclick="clearCpSearch()" title="Limpiar">✕</button>
+        <button class="cp-search-clear" id="cpSearchClear" onclick="event.stopPropagation(); clearCpSearch()" title="Limpiar">✕</button>
       </div>
-      <div class="cp-search-dropdown" id="cpSearchDropdown"></div>
+      <div class="cp-search-dropdown" id="cpSearchDropdown">
+        <div id="omniCentros">
+          <div class="cp-search-section omni-sec-head">Centros <span id="centroDropdownCount"></span></div>
+          <div class="centro-option centro-option-all" id="centroOptionAll" onclick="event.stopPropagation(); toggleAllCentroOptions()">
+            <span class="centro-option-check">✓</span><span>(Seleccionar todo)</span>
+          </div>
+          <div class="centro-dropdown-list" id="centroDropdownList"></div>
+        </div>
+        <div id="omniResults"></div>
+        <div class="centro-dropdown-footer">
+          <span class="centro-dropdown-count">Centros: marcar y Aceptar · CP y áreas: clic para ir</span>
+          <button class="btn-ghost btn-sm" onclick="event.stopPropagation(); closeOmni()">Cancelar</button>
+          <button class="btn-primary btn-sm" onclick="event.stopPropagation(); applyOmni()">Aceptar</button>
+        </div>
+      </div>
     </div>
     <button class="btn-ghost panel-toggle-btn" id="panelToggleBtn" onclick="togglePanel()" title="Mostrar/ocultar panel lateral">
       <span class="panel-toggle-icon">▤</span><span class="panel-toggle-label">Ocultar panel</span>
@@ -675,11 +669,76 @@ function buildCentroButtons() {
 
 let _allCentros = [];
 
-// Selector de centros estilo filtro de Excel: se marcan/desmarcan casillas
-// (o «Seleccionar todo») y se aplica con Aceptar; Cancelar, Esc o clic fuera
-// descartan los cambios.
+// ── BUSCADOR UNIFICADO ──────────────────────────────────────────────────────
+// Un solo cuadro: los centros se marcan/desmarcan (estilo filtro de Excel) y
+// se aplican con Aceptar; los CP y las áreas se abren con un clic. Cancelar,
+// Esc o clic fuera descartan los cambios pendientes.
 let _pendingCentros = new Set();
 let _visibleCentros = [];
+let _omniOutsideClick = null;
+
+function omniIsOpen() { return document.getElementById('cpSearchDropdown').style.display === 'block'; }
+function centroMatches(c, q) {
+  if (!q) return true;
+  const info = COLMENAS.find(x => x.code === c);
+  return c.toLowerCase().includes(q) || !!(info && info.name.toLowerCase().includes(q));
+}
+function pendingChanged() {
+  const next = [..._pendingCentros].sort();
+  return next.length !== activeCentros.length || next.some((c, i) => c !== activeCentros[i]);
+}
+function openOmni() {
+  if (omniIsOpen()) return;
+  _pendingCentros = new Set(activeCentros);
+  renderOmni(document.getElementById('cpSearchInput').value);
+  _omniOutsideClick = (e) => {
+    const w = document.getElementById('omniWrap');
+    if (w && !w.contains(e.target)) closeOmni();
+  };
+  setTimeout(() => document.addEventListener('click', _omniOutsideClick), 0);
+}
+function closeOmni() {
+  document.getElementById('cpSearchDropdown').style.display = 'none';
+  if (_omniOutsideClick) { document.removeEventListener('click', _omniOutsideClick); _omniOutsideClick = null; }
+  document.getElementById('cpSearchInput').value = '';
+  document.getElementById('cpSearchClear').style.display = 'none';
+  _cpSearchResults = []; _cpSearchSelectedIdx = -1;
+}
+function applyOmni() {
+  const changed = pendingChanged();
+  const next = [..._pendingCentros];
+  closeOmni();
+  if (changed) setCentros(next);
+}
+// Enter: aplica los centros si se ha tocado alguna casilla; si no, abre el resultado
+function omniEnter() {
+  if (pendingChanged()) return applyOmni();
+  const idx = _cpSearchSelectedIdx >= 0 ? _cpSearchSelectedIdx : 0;
+  if (_cpSearchResults[idx]) selectSearchResult(idx); else closeOmni();
+}
+document.addEventListener('keydown', (e) => {
+  if (!omniIsOpen()) return;
+  if (e.key === 'Enter') { e.preventDefault(); omniEnter(); }
+  else if (e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); closeOmni(); document.getElementById('cpSearchInput').blur(); }
+}, true);
+
+// Etiquetas con los centros seleccionados dentro del cuadro (✕ los quita al momento)
+function renderOmniChips() {
+  const box = document.getElementById('omniChips');
+  if (!box) return;
+  box.innerHTML = '';
+  const cs = activeCentros;
+  const mk = (html) => { const el = document.createElement('span'); el.className = 'omni-chip'; el.innerHTML = html; return el; };
+  if (cs.length > 3) {
+    box.appendChild(mk(`<span class="omni-chip-dot" style="background:#009a4e"></span>${cs.length} centros`));
+    return;
+  }
+  cs.forEach(c => {
+    const chip = mk(`<span class="omni-chip-dot" style="background:${CENTRO_COLORS[c]}"></span>${c.toUpperCase()}<button title="Quitar ${c.toUpperCase()}">✕</button>`);
+    chip.querySelector('button').onclick = (e) => { e.stopPropagation(); closeOmni(); setCentros(activeCentros.filter(x => x !== c)); };
+    box.appendChild(chip);
+  });
+}
 
 function renderCentroOptions(list) {
   _visibleCentros = list;
@@ -704,8 +763,9 @@ function renderCentroOptions(list) {
     } else {
       div.appendChild(dot);
     }
+    const info = COLMENAS.find(x => x.code === c);
     const lbl = document.createElement('span');
-    lbl.textContent = c.toUpperCase();
+    lbl.innerHTML = c.toUpperCase() + (info ? ` <span class="cp-search-sub" style="font-weight:500">· ${escHtml(titleCase(info.name))}</span>` : '');
     div.appendChild(lbl);
     const solo = document.createElement('span');
     solo.className = 'centro-option-solo';
@@ -738,52 +798,12 @@ function toggleCentroOption(c) {
   syncCentroOptions();
 }
 
-// «Seleccionar todo» actúa sobre los centros visibles (respeta el filtro de búsqueda)
+// «Seleccionar todo» actúa sobre los centros visibles (respeta lo escrito)
 function toggleAllCentroOptions() {
   const allOn = _visibleCentros.every(c => _pendingCentros.has(c));
   _visibleCentros.forEach(c => allOn ? _pendingCentros.delete(c) : _pendingCentros.add(c));
   syncCentroOptions();
 }
-
-function filterCentros(q) {
-  const filtered = _allCentros.filter(c => c.toLowerCase().includes(q.toLowerCase()));
-  renderCentroOptions(filtered);
-}
-
-let _centroOutsideClick = null;
-function toggleCentroDropdown() {
-  const menu = document.getElementById('centroDropdownMenu');
-  const isOpen = menu.style.display !== 'none';
-  if (isOpen) { closeCentroDropdown(); return; }
-  _pendingCentros = new Set(activeCentros);
-  menu.style.display = 'block';
-  document.getElementById('centroSearchInput').value = '';
-  renderCentroOptions(_allCentros);
-  setTimeout(() => document.getElementById('centroSearchInput').focus(), 50);
-  _centroOutsideClick = (e) => {
-    const wrap = document.getElementById('centroDropdownWrap');
-    if (wrap && !wrap.contains(e.target)) closeCentroDropdown();
-  };
-  setTimeout(() => document.addEventListener('click', _centroOutsideClick), 0);
-}
-
-function closeCentroDropdown() {
-  document.getElementById('centroDropdownMenu').style.display = 'none';
-  if (_centroOutsideClick) { document.removeEventListener('click', _centroOutsideClick); _centroOutsideClick = null; }
-}
-
-function applyCentroDropdown() {
-  closeCentroDropdown();
-  setCentros([..._pendingCentros]);
-}
-
-// Con el selector abierto, Enter aplica y Esc cancela (esté el foco donde esté)
-document.addEventListener('keydown', (e) => {
-  const menu = document.getElementById('centroDropdownMenu');
-  if (!menu || menu.style.display === 'none') return;
-  if (e.key === 'Enter') { e.preventDefault(); applyCentroDropdown(); }
-  else if (e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); closeCentroDropdown(); }
-}, true);
 
 function setCentro(c, scIdx) {
   setCentros([c], scIdx);
@@ -882,21 +902,7 @@ function setCentros(centros, scIdx) {
   _multiScenarios = isMulti() ? buildMultiScenarios(centros) : [];
   selectedArea = null; updateAreaChip();
   setMapViewLocked(false); // new centro → always fit to its bounds
-  // Update dropdown label + color
-  const lbl = document.getElementById('centroDropdownLabel');
-  const dd = document.getElementById('centroDropdown');
-  if (lbl) lbl.textContent = !centros.length ? '— seleccionar —'
-    : centros.length > 4 ? `${centros.length} centros` : selectionLabel();
-  if (dd && !centros.length) { dd.style.borderColor = ''; dd.style.boxShadow = ''; }
-  else if (dd) {
-    const color = isMulti() ? '#009a4e' : CENTRO_COLORS[activeCentro];
-    dd.style.borderColor = color;
-    dd.style.boxShadow = color.startsWith('#') ? `0 0 0 1px ${color}44` : 'none';
-  }
-  // Mark selected in list
-  document.querySelectorAll('.centro-option').forEach(el => {
-    el.classList.toggle('selected', activeCentros.includes(el.dataset.value));
-  });
+  renderOmniChips();
   document.getElementById('centroTitle').textContent = selectionLabel() || '—';
   document.getElementById('mareasCentroTitle').textContent = selectionLabel() || '—';
   if (!centros.length) { activeScIdx = 0; clearSelectionView(); return; }
@@ -2462,112 +2468,74 @@ function bestScenarioIdx(scenarios) {
 }
 
 function clearCpSearch() {
-  document.getElementById('cpSearchInput').value = '';
-  document.getElementById('cpSearchDropdown').style.display = 'none';
-  document.getElementById('cpSearchClear').style.display = 'none';
-  _cpSearchResults = [];
-  _cpSearchSelectedIdx = -1;
+  closeOmni();
+  document.getElementById('cpSearchInput').focus();
 }
 
 function onCpSearchInput(val) {
-  const q = val.trim();
-  const dropdown = document.getElementById('cpSearchDropdown');
-  const clearBtn = document.getElementById('cpSearchClear');
-  _cpSearchSelectedIdx = -1;
-
-  clearBtn.style.display = q.length > 0 ? 'flex' : 'none';
-
-  if (q.length < 2) {
-    dropdown.style.display = 'none';
-    _cpSearchResults = [];
-    return;
-  }
-
-  _cpSearchResults = findSearchResults(q);
-
-  if (_cpSearchResults.length === 0) {
-    dropdown.innerHTML = `<div class="cp-search-no-results">Sin resultados para "<strong style="color:#5a6280">${q}</strong>"</div>`;
-    dropdown.style.display = 'block';
-    setupDropdownOutsideClose();
-    return;
-  }
-
-  dropdown.innerHTML = '';
-
-  // Separate into CP and ÁREA groups
-  const cpItems   = _cpSearchResults.filter(r => r.type === 'cp');
-  const areaItems = _cpSearchResults.filter(r => r.type === 'area');
-
-  function renderItem(r, globalIdx) {
-    const item = document.createElement('div');
-    item.className = 'cp-search-item';
-    item.dataset.idx = globalIdx;
-    const color = CENTRO_COLORS[r.centro] || '#fff';
-
-    if (r.type === 'cp') {
-      item.innerHTML = `
-        <span class="cp-search-dot" style="background:${color}"></span>
-        <span class="cp-search-label">${highlightMatch(r.cp, q)}</span>
-        <span class="cp-search-pill cp">CP</span>
-        <span class="cp-search-area-badge">${r.area}</span>
-        <span class="cp-search-sub" style="margin-left:auto"><strong>${r.centro.toUpperCase()}</strong> · ${r.scLabel}</span>
-        ${r.isToday ? '<span class="cp-search-today">HOY</span>' : ''}
-      `;
-    } else {
-      item.innerHTML = `
-        <span class="cp-search-dot" style="background:${color}"></span>
-        <span class="cp-search-label" style="min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${highlightMatch(r.area, q)}</span>
-        <span class="cp-search-pill area">ÁREA</span>
-        <span class="cp-search-sub"><strong>${r.centro.toUpperCase()}</strong> · ${r.cpCount} CPs</span>
-        ${r.isToday ? '<span class="cp-search-today">HOY</span>' : ''}
-      `;
-    }
-
-    item.onmousedown = (e) => { e.preventDefault(); selectSearchResult(globalIdx); };
-    return item;
-  }
-
-  if (cpItems.length > 0) {
-    const sec = document.createElement('div');
-    sec.className = 'cp-search-section';
-    sec.textContent = 'Códigos postales';
-    dropdown.appendChild(sec);
-    cpItems.forEach((r, _) => {
-      const gi = _cpSearchResults.indexOf(r);
-      dropdown.appendChild(renderItem(r, gi));
-    });
-  }
-
-  if (areaItems.length > 0) {
-    const sec = document.createElement('div');
-    sec.className = 'cp-search-section';
-    sec.textContent = 'Áreas';
-    dropdown.appendChild(sec);
-    areaItems.forEach((r) => {
-      const gi = _cpSearchResults.indexOf(r);
-      dropdown.appendChild(renderItem(r, gi));
-    });
-  }
-
-  dropdown.style.display = 'block';
-  setupDropdownOutsideClose();
+  document.getElementById('cpSearchClear').style.display = val.trim() ? 'flex' : 'none';
+  if (!omniIsOpen()) openOmni(); else renderOmni(val);
 }
 
-function setupDropdownOutsideClose() {
-  function _outside(e) {
-    const wrap = document.getElementById('cpSearchWrap');
-    if (wrap && !wrap.contains(e.target)) {
-      document.getElementById('cpSearchDropdown').style.display = 'none';
-      document.removeEventListener('click', _outside);
-    }
+// Pinta el desplegable: centros que coinciden (con casilla) y, debajo, CP y áreas
+function renderOmni(val) {
+  const q = val.trim();
+  const ql = q.toLowerCase();
+  const dropdown = document.getElementById('cpSearchDropdown');
+  const results = document.getElementById('omniResults');
+  _cpSearchSelectedIdx = -1;
+
+  const visible = _allCentros.filter(c => centroMatches(c, ql));
+  renderCentroOptions(visible);
+  document.getElementById('omniCentros').style.display = visible.length ? '' : 'none';
+
+  results.innerHTML = '';
+  _cpSearchResults = q.length >= 2 ? findSearchResults(q) : [];
+  if (q.length >= 2 && !_cpSearchResults.length && !visible.length) {
+    results.innerHTML = `<div class="cp-search-no-results">Sin resultados para "<strong>${escHtml(q)}</strong>"</div>`;
   }
-  setTimeout(() => document.addEventListener('click', _outside), 0);
+  const cpItems = _cpSearchResults.filter(r => r.type === 'cp');
+  const areaItems = _cpSearchResults.filter(r => r.type === 'area');
+  [['Códigos postales', cpItems], ['Áreas', areaItems]].forEach(([title, items]) => {
+    if (!items.length) return;
+    const sec = document.createElement('div');
+    sec.className = 'cp-search-section';
+    sec.textContent = title;
+    results.appendChild(sec);
+    items.forEach(r => results.appendChild(renderSearchItem(r, _cpSearchResults.indexOf(r), q)));
+  });
+  dropdown.style.display = 'block';
+}
+
+function renderSearchItem(r, globalIdx, q) {
+  const item = document.createElement('div');
+  item.className = 'cp-search-item';
+  item.dataset.idx = globalIdx;
+  const color = CENTRO_COLORS[r.centro] || '#fff';
+  if (r.type === 'cp') {
+    item.innerHTML = `
+      <span class="cp-search-dot" style="background:${color}"></span>
+      <span class="cp-search-label">${highlightMatch(r.cp, q)}</span>
+      <span class="cp-search-pill cp">CP</span>
+      <span class="cp-search-area-badge">${r.area}</span>
+      <span class="cp-search-sub" style="margin-left:auto"><strong>${r.centro.toUpperCase()}</strong> · ${r.scLabel}</span>
+      ${r.isToday ? '<span class="cp-search-today">HOY</span>' : ''}
+    `;
+  } else {
+    item.innerHTML = `
+      <span class="cp-search-dot" style="background:${color}"></span>
+      <span class="cp-search-label" style="min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${highlightMatch(r.area, q)}</span>
+      <span class="cp-search-pill area">ÁREA</span>
+      <span class="cp-search-sub"><strong>${r.centro.toUpperCase()}</strong> · ${r.cpCount} CPs</span>
+      ${r.isToday ? '<span class="cp-search-today">HOY</span>' : ''}
+    `;
+  }
+  item.onmousedown = (e) => { e.preventDefault(); selectSearchResult(globalIdx); };
+  return item;
 }
 
 function onCpSearchKeydown(e) {
-  const dropdown = document.getElementById('cpSearchDropdown');
-  if (dropdown.style.display === 'none') return;
-  const items = dropdown.querySelectorAll('.cp-search-item');
+  if (!omniIsOpen()) return;
   if (e.key === 'ArrowDown') {
     e.preventDefault();
     _cpSearchSelectedIdx = Math.min(_cpSearchSelectedIdx + 1, _cpSearchResults.length - 1);
@@ -2576,13 +2544,6 @@ function onCpSearchKeydown(e) {
     e.preventDefault();
     _cpSearchSelectedIdx = Math.max(_cpSearchSelectedIdx - 1, 0);
     highlightCpDropdownItem();
-  } else if (e.key === 'Enter') {
-    e.preventDefault();
-    const idx = _cpSearchSelectedIdx >= 0 ? _cpSearchSelectedIdx : 0;
-    if (_cpSearchResults[idx]) selectSearchResult(idx);
-  } else if (e.key === 'Escape') {
-    dropdown.style.display = 'none';
-    document.getElementById('cpSearchInput').blur();
   }
 }
 
@@ -2601,10 +2562,7 @@ async function selectSearchResult(idx) {
   const r = _cpSearchResults[idx];
   if (!r) return;
 
-  // Close dropdown + clear input
-  document.getElementById('cpSearchDropdown').style.display = 'none';
-  document.getElementById('cpSearchInput').value = '';
-  document.getElementById('cpSearchClear').style.display = 'none';
+  closeOmni();
 
   // Navigate to the right centro + scenario.
   // Si el centro ya forma parte de una selección múltiple se mantiene la
@@ -2624,16 +2582,7 @@ async function selectSearchResult(idx) {
     activeCentro = r.centro;
     _multiScenarios = [];
     setMapViewLocked(false); // new centro → reset zoom
-    const lbl = document.getElementById('centroDropdownLabel');
-    const dd  = document.getElementById('centroDropdown');
-    if (lbl) lbl.textContent = r.centro.toUpperCase();
-    if (dd) {
-      const color = CENTRO_COLORS[r.centro];
-      dd.style.borderColor = color;
-      dd.style.boxShadow = `0 0 0 1px ${color}44`;
-    }
-    document.querySelectorAll('.centro-option').forEach(el =>
-      el.classList.toggle('selected', el.dataset.value === r.centro));
+    renderOmniChips();
     document.getElementById('centroTitle').textContent = r.centro.toUpperCase();
     document.getElementById('mareasCentroTitle').textContent = r.centro.toUpperCase();
   }
