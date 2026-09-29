@@ -802,7 +802,9 @@ function renderOmniChips() {
   const cs = activeCentros;
   const mk = (html) => { const el = document.createElement('span'); el.className = 'omni-chip'; el.innerHTML = html; return el; };
   if (cs.length > 3) {
-    box.appendChild(mk(`<span class="omni-chip-dot" style="background:#009a4e"></span>${cs.length} centros`));
+    const chip = mk(`<span class="omni-chip-dot" style="background:#009a4e"></span>${cs.length} centros<button title="Quitar los ${cs.length} centros">✕</button>`);
+    chip.querySelector('button').onclick = (e) => { e.stopPropagation(); closeOmni(); setCentros([]); };
+    box.appendChild(chip);
     return;
   }
   cs.forEach(c => {
