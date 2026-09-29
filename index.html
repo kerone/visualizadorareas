@@ -624,6 +624,30 @@ const CENTRO_ICONS = {
 const CENTRO_COLORS_FIXED = {vlc1:'#75c72d',bcn1:'#3176c6',mad1:'#dd3f3e',mad2:'#ea4696',mad3:'#f97316',alc1:'#f5c504',svq1:'#9b3bc4',pan2:'#22d3ee'};
 const CENTRO_COLORS_DYNAMIC = {}; // filled on demand
 
+// Color de relleno por centro en la vista Centro: las colmenas conservan su
+// color de identidad pero suavizado (misma saturación y luz que la paleta de
+// áreas); las tiendas reciben colores de la paleta evitando parecerse a sus
+// vecinas. Ese color pasa también a chips, iconos y leyenda de la tienda.
+function toHex(c) {
+  if (/^#[0-9a-f]{6}$/i.test(c)) return c;
+  const m = /hsl\(\s*([\d.]+),\s*([\d.]+)%,\s*([\d.]+)%\s*\)/i.exec(c);
+  return m ? hslToHex(+m[1], +m[2], +m[3]) : c;
+}
+function softColor(c) {
+  const hex = toHex(c);
+  if (!/^#[0-9a-f]{6}$/i.test(hex)) return c;
+  const [h, sat, l] = hexToHsl(hex);
+  return hslToHex(h, Math.min(sat, 62), Math.min(64, Math.max(54, l)));
+}
+function centroFillColors(centros, adj) {
+  const key = 'centros:' + centros.join('+');
+  const user = areaColorUser[key] = areaColorUser[key] || {};
+  centros.forEach(c => { if (isColmena(c)) user[c] = softColor(CENTRO_COLORS[c]); });
+  const colors = assignAreaColors(key, centros, adj);
+  centros.forEach(c => { if (!isColmena(c) && !CENTRO_COLORS_FIXED[c]) CENTRO_COLORS_DYNAMIC[c] = colors[c]; });
+  return colors;
+}
+
 // Golden-ratio color generation for unknown centers
 let _colorIdx = 0;
 const _GOLDEN = 0.618033988749895;
@@ -1555,18 +1579,30 @@ async function renderMap() {
     byProv[p].push(cp);
   });
 
+  // Geometrías primero, para repartir los colores como en la vista Áreas:
+  // colmenas con su color de siempre (suavizado) y tiendas con la paleta,
+  // sin que dos centros vecinos se parezcan.
+  const geos = {};
+  for (const prov of Object.keys(byProv)) {
+    const geo = await getGeoJSON(prov, new Set(byProv[prov]));
+    if (token !== _renderToken) { if (token === _loadingToken) document.getElementById('loadingMsg').style.display = 'none'; return; }
+    if (geo) geos[prov] = geo;
+  }
+  const cpCentro = {};
+  allCPs.forEach(cp => { cpCentro[cp] = centroOf(cp); });
+  const fillOf = centroFillColors(activeCentros, areaAdjacency(Object.values(geos), cpCentro));
+
   const bounds = [];
   for (const prov of Object.keys(byProv)) {
     const cpSet = new Set(byProv[prov]);
-    const geo = await getGeoJSON(prov, cpSet);
-    if (token !== _renderToken) { if (token === _loadingToken) document.getElementById('loadingMsg').style.display = 'none'; return; }
+    const geo = geos[prov];
     if (!geo) continue;
     geo.features.forEach(feat => {
       const raw = feat.properties?.COD_POSTAL || feat.properties?.cp || '';
       const cp = String(raw).padStart(5,'0');
       if (!cpSet.has(cp)) return;
       const centro = centroOf(cp);
-      const centerColor = CENTRO_COLORS[centro];
+      const centerColor = fillOf[centro] || CENTRO_COLORS[centro];
       const lyr = L.geoJSON(feat, {
         style: polyStyle(centerColor, 0.6),
         onEachFeature: (_f, layer) => {
