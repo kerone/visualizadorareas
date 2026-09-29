@@ -633,7 +633,10 @@ const CENTRO_COLORS = new Proxy({}, {
 });
 
 // ── COLMENAS (ubicación exacta de cada centro) ──────────────────────────────
-const COLMENAS = [
+// Lista de centros (colmenas, panales y tiendas) con sus coordenadas. Se carga
+// de data/centros.json (generado del export de Center Info); esta lista corta
+// embebida es el respaldo si ese archivo no está disponible.
+let COLMENAS = [
   {code:"pan3", mcode:"3689", zone:"Z26", region:"R06", name:"AVDA. DE LA ILUSTRACIÓN", type:"panal", lat:36.5075, lng:-6.268646, street:"AV DE LA ILUSTRACIÓN 4", town:"Cádiz", cp:"11011", parent:"svq1", opening:"26/10/2007"},
   {code:"pan2", mcode:"3831", zone:"Z26", region:"R06", name:"SALINAS DE PONIENTE", type:"panal", lat:36.61117, lng:-6.19944, street:"CL ALBERT EINSTEIN 13", town:"El Puerto de Santa María", cp:"11500", parent:"svq1", opening:"19/2/2010"},
   {code:"mad3", mcode:"4463", zone:"Z80", region:"R20", name:"COLMENA VALLECAS", type:"hive", lat:40.3677, lng:-3.634534, street:"PG LA ATALAYUELA (PTE AGRUP. PARCELAS) S/N", town:"Madrid", cp:"28031", parent:"", opening:"11/6/2026"},
@@ -669,7 +672,11 @@ window.addEventListener('DOMContentLoaded', () => {
   setViewMode('areas'); // vista por defecto
   showLoadingOverlay(true);
   // Cargar datos desde JSONBin antes de renderizar nada
-  loadFromJSONBin().then(loaded => {
+  // Centros con coordenadas (para pines, nombres y direcciones)
+  const centrosReady = fetch('data/centros.json').then(r => r.ok ? r.json() : null).then(list => {
+    if (Array.isArray(list) && list.length) COLMENAS = list;
+  }).catch(() => {});
+  centrosReady.then(() => loadFromJSONBin()).then(loaded => {
     showLoadingOverlay(false);
     if (loaded) {
       buildCentroButtons();
@@ -1357,7 +1364,11 @@ const ICON_STORE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 44 
   <circle cx="22" cy="11.5" r="1.9" fill="#fde68a"/>
 </svg>`;
 // Colmena/panal = está en la lista de colmenas o tiene código tipo mad1/pan2; el resto son tiendas
-function isColmena(code) { return COLMENAS.some(c => c.code === code) || /^[a-z]{3}\d$/i.test(code); }
+function centroInfo(code) { return COLMENAS.find(c => c.code === code); }
+function isColmena(code) {
+  const i = centroInfo(code);
+  return i ? (i.type === 'hive' || i.type === 'panal') : /^[a-z]{3}\d$/i.test(code);
+}
 function centroArt(code) {
   if (/^pan/.test(code)) return ICON_SVG_BREAD;
   return (isColmena(code) ? ICON_SVG_BEE : ICON_STORE_SVG).replace(/\{c\}/g, CENTRO_COLORS[code]);
@@ -1365,8 +1376,8 @@ function centroArt(code) {
 const COLMENA_ICON_SIZE = 34;
 function svgUrl(svg) { return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg.replace(/\s+/g,' ')); }
 function colmenaIcon(code) {
-  const art = /^pan/.test(code) ? ICON_SVG_BREAD : ICON_SVG_BEE.replace(/\{c\}/g, CENTRO_COLORS[code]);
-  const s = COLMENA_ICON_SIZE;
+  const art = centroArt(code);
+  const s = isColmena(code) ? COLMENA_ICON_SIZE : 26; // las tiendas, algo más pequeñas
   return L.icon({iconUrl:svgUrl(art), iconSize:[s,s], iconAnchor:[s/2,s/2], popupAnchor:[0,-s/2]});
 }
 let colmenaGroup = null;
@@ -1389,7 +1400,7 @@ function renderColmenas() {
       zIndexOffset: 1000,
       title: c.name
     }).bindPopup(`<div class="popup-cp">${c.name}</div>
-      <div style="font-size:11px;color:${color};font-weight:600;margin-bottom:4px">▶ ${c.code.toUpperCase()} · ${c.type === 'panal' ? 'Panal' : 'Colmena'}</div>
+      <div style="font-size:11px;color:${color};font-weight:600;margin-bottom:4px">▶ ${c.code.toUpperCase()} · ${c.type === 'panal' ? 'Panal' : c.type === 'hive' ? 'Colmena' : 'Tienda'}</div>
       <div style="font-size:12px;color:#3b3b38">${c.street}</div>
       <div style="font-size:12px;color:#3b3b38">${c.cp} ${c.town}</div>
       <div style="font-size:11px;color:#6f6f6a;margin-top:4px">${c.lat.toFixed(6)}, ${c.lng.toFixed(6)}</div>`);
