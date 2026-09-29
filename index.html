@@ -659,6 +659,7 @@ let activeCentros = [];          // todos los centros seleccionados (vacío al e
 let activeScIdx = 0;
 let _multiScenarios = [];        // escenarios combinados cuando hay >1 centro
 let _renderToken = 0;            // descarta renders async obsoletos
+let _loadingToken = 0;           // render que mostró «Cargando mapa…»
 let leafletMap = null, leafletMap2 = null;
 let geojsonCache = {};
 let cpToLayer = {}, allLayers = [];
@@ -1231,7 +1232,7 @@ async function getGeoJSON(cp, neededCps) {
   if (!provName) return null;
   if (!geojsonCache[prov]) {
     const data = await fetchJSON(CP_SOURCE_URL(provName)) || await fetchJSON(CP_FALLBACK_URL(provName));
-    if (!data) return null;
+    if (!data) { showToast(`⚠ No se han podido cargar los polígonos de ${provName}`); return null; }
     geojsonCache[prov] = data;
   }
   const data = geojsonCache[prov];
@@ -1245,7 +1246,7 @@ async function getGeoJSON(cp, neededCps) {
       if (fb) {
         const miss = new Set(missing);
         fb.features.forEach(f => { if (miss.has(cpOf(f))) { f.properties = {...f.properties, source: 'respaldo'}; data.features.push(f); miss.delete(cpOf(f)); } });
-        if (miss.size) console.warn('CP sin polígono:', [...miss].join(', '));
+        if (miss.size) { console.warn('CP sin polígono:', [...miss].join(', ')); showToast(`⚠ ${miss.size} CP sin polígono en ${provName}: ${[...miss].slice(0, 6).join(', ')}${miss.size > 6 ? '…' : ''}`); }
       }
     }
   }
@@ -1527,6 +1528,7 @@ async function renderMap() {
 
   clearMap1();
   hiddenAreas = new Set();
+  _loadingToken = token;
   document.getElementById('loadingMsg').style.display = 'block';
 
   const cpAreas = sc.cp_areas;
@@ -1545,7 +1547,7 @@ async function renderMap() {
   for (const prov of Object.keys(byProv)) {
     const cpSet = new Set(byProv[prov]);
     const geo = await getGeoJSON(prov, cpSet);
-    if (token !== _renderToken) return;
+    if (token !== _renderToken) { if (token === _loadingToken) document.getElementById('loadingMsg').style.display = 'none'; return; }
     if (!geo) continue;
     geo.features.forEach(feat => {
       const raw = feat.properties?.COD_POSTAL || feat.properties?.cp || '';
@@ -1574,8 +1576,10 @@ async function renderMap() {
 
   document.getElementById('loadingMsg').style.display = 'none';
   renderColmenas();
+  const onlyPins = bounds.length === 0;
   bounds.push(...colmenaBounds());
-  if (bounds.length && !_mapViewLocked) leafletMap.fitBounds(bounds.reduce((a,b)=>a.extend(b)), {padding:[20,20]});
+  if (bounds.length && !_mapViewLocked) leafletMap.fitBounds(bounds.reduce((a,b)=>a.extend(b)), {padding:[20,20], maxZoom: onlyPins ? 12 : 18});
+  if (onlyPins && Object.keys(cpAreas).length) showToast(`⚠ Ningún CP de ${selectionLabel()} tiene polígono`);
   renderLegendCentro(sc);
   addCpLabels(cpToLayer1, leafletMap, labelGroup1, '#ffffff', null);
 }
@@ -1661,8 +1665,10 @@ async function renderMapAreas() {
   }
 
   renderColmenas();
+  const onlyPins = bounds.length === 0;
   bounds.push(...colmenaBounds());
-  if (bounds.length && !_mapViewLocked) leafletMap2.fitBounds(bounds.reduce((a,b)=>a.extend(b)), {padding:[20,20]});
+  if (bounds.length && !_mapViewLocked) leafletMap2.fitBounds(bounds.reduce((a,b)=>a.extend(b)), {padding:[20,20], maxZoom: onlyPins ? 12 : 18});
+  if (onlyPins && Object.keys(cpAreas).length) showToast(`⚠ Ningún CP de ${selectionLabel()} tiene polígono`);
   if (selectedArea && !sc.areas.includes(selectedArea)) selectedArea = null;
   renderAreasLegend(sc, areaColors);
   renderLegendCentro(sc);
