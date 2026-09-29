@@ -171,7 +171,9 @@ button{font-family:inherit}
 .area-selected-chip button:hover{background:var(--accent-soft);color:var(--accent-dark)}
 .map-reset{position:absolute;top:18px;right:18px;z-index:1000;height:32px!important;font-size:12px!important;box-shadow:0 2px 8px rgba(0,0,0,.15)}
 .loading-msg{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 22px;font-size:13px;color:var(--muted);z-index:1000;box-shadow:var(--shadow)}
-.legend{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:6px 4px 0;font-size:12px;flex-shrink:0}
+.legend{display:flex;gap:12px;align-items:center;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;white-space:nowrap;scrollbar-width:thin;padding:6px 4px 0;font-size:12px;flex-shrink:0;min-height:26px}
+.legend-more{font-size:12px;font-weight:700;color:var(--accent-dark);cursor:default;flex-shrink:0}
+.legend-item{flex-shrink:0}
 .legend-item{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600}
 .legend-dot{width:12px;height:12px;border-radius:4px;flex-shrink:0}
 .legend-muted{color:var(--muted);font-size:12px}
@@ -1567,13 +1569,19 @@ async function renderMap() {
   addCpLabels(cpToLayer1, leafletMap, labelGroup1, '#ffffff', null);
 }
 
+// Leyenda inferior: una sola línea. Colmenas primero y, con muchos centros,
+// solo los primeros y un «+N más» (el detalle está en el buscador).
+const LEGEND_MAX_CENTROS = 12;
 function renderLegendCentro(sc) {
   const legend = document.getElementById('legend');
-  const items = activeCentros.map(c =>
+  const ordered = [...activeCentros].sort((a, b) => (isColmena(b) - isColmena(a)) || a.localeCompare(b));
+  const shown = ordered.slice(0, LEGEND_MAX_CENTROS);
+  const rest = ordered.length - shown.length;
+  const items = shown.map(c =>
     `<div class="legend-item"><div class="legend-dot" style="background:${CENTRO_COLORS[c]}"></div><span>${c.toUpperCase()}</span></div>`
-  ).join('');
+  ).join('') + (rest > 0 ? `<span class="legend-more" title="${escHtml(ordered.slice(LEGEND_MAX_CENTROS).map(c => c.toUpperCase()).join(', '))}">+${rest} más</span>` : '');
   legend.innerHTML = `
-    <span class="legend-muted">${isMulti() ? 'CENTROS:' : 'CENTRO:'}</span>
+    <span class="legend-muted">${isMulti() ? `${activeCentros.length} CENTROS:` : 'CENTRO:'}</span>
     ${items}
     <span class="legend-muted" style="margin-left:8px">${Object.keys(sc.cp_areas).length} CPs · ${fmtD(sc.from)} – ${fmtD(sc.to)}</span>
   `;
