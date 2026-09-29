@@ -1176,19 +1176,43 @@ const PROV_NAMES = {
   '51':'CEUTA','52':'MELILLA'
 };
 
-async function getGeoJSON(cp) {
+// Polígonos de CP: los de Correos (data/cp/<PROVINCIA>.geojson, generados desde
+// la BD con tools/wkt_to_geojson.py). Si algún CP del escenario no está en ese
+// archivo, se completa con el polígono del dataset público de respaldo.
+const CP_SOURCE_URL = prov => `data/cp/${prov}.geojson`;
+const CP_FALLBACK_URL = prov => `https://cdn.jsdelivr.net/gh/inigoflores/ds-codigos-postales@master/data/${prov}.geojson`;
+const fallbackCache = {};
+const cpOf = f => String(f.properties?.COD_POSTAL || f.properties?.cp || '').padStart(5, '0');
+
+async function fetchJSON(url) {
+  try { const res = await fetch(url); return res.ok ? await res.json() : null; } catch { return null; }
+}
+
+async function getGeoJSON(cp, neededCps) {
   const prov = cp.substring(0,2);
-  if (geojsonCache[prov]) return geojsonCache[prov];
   const provName = PROV_NAMES[prov];
   if (!provName) return null;
-  const url = `https://cdn.jsdelivr.net/gh/inigoflores/ds-codigos-postales@master/data/${provName}.geojson`;
-  try {
-    const res = await fetch(url);
-    if (!res.ok) return null;
-    const data = await res.json();
+  if (!geojsonCache[prov]) {
+    const data = await fetchJSON(CP_SOURCE_URL(provName)) || await fetchJSON(CP_FALLBACK_URL(provName));
+    if (!data) return null;
     geojsonCache[prov] = data;
-    return data;
-  } catch { return null; }
+  }
+  const data = geojsonCache[prov];
+  // Completar con el respaldo los CP que falten en los polígonos de Correos
+  if (neededCps && neededCps.size) {
+    const have = new Set(data.features.map(cpOf));
+    const missing = [...neededCps].filter(c => c.startsWith(prov) && !have.has(c));
+    if (missing.length) {
+      if (fallbackCache[prov] === undefined) fallbackCache[prov] = await fetchJSON(CP_FALLBACK_URL(provName));
+      const fb = fallbackCache[prov];
+      if (fb) {
+        const miss = new Set(missing);
+        fb.features.forEach(f => { if (miss.has(cpOf(f))) { f.properties = {...f.properties, source: 'respaldo'}; data.features.push(f); miss.delete(cpOf(f)); } });
+        if (miss.size) console.warn('CP sin polígono:', [...miss].join(', '));
+      }
+    }
+  }
+  return data;
 }
 
 
@@ -1462,10 +1486,10 @@ async function renderMap() {
 
   const bounds = [];
   for (const prov of Object.keys(byProv)) {
-    const geo = await getGeoJSON(prov);
+    const cpSet = new Set(byProv[prov]);
+    const geo = await getGeoJSON(prov, cpSet);
     if (token !== _renderToken) return;
     if (!geo) continue;
-    const cpSet = new Set(byProv[prov]);
     geo.features.forEach(feat => {
       const raw = feat.properties?.COD_POSTAL || feat.properties?.cp || '';
       const cp = String(raw).padStart(5,'0');
@@ -1525,8 +1549,9 @@ async function renderMapAreas() {
   // Geometrías primero para saber qué áreas se tocan y darles colores distintos
   const provs = [...new Set(Object.keys(cpAreas).map(cp => cp.substring(0, 2)))];
   const geos = [];
+  const allCps = new Set(Object.keys(cpAreas));
   for (const prov of provs) {
-    const g = await getGeoJSON(prov);
+    const g = await getGeoJSON(prov, allCps);
     if (token !== _renderToken) return;
     if (g) geos.push(g);
   }
@@ -1541,10 +1566,10 @@ async function renderMapAreas() {
 
   const bounds = [];
   for (const prov of Object.keys(byProv)) {
-    const geo = await getGeoJSON(prov);
+    const cpSet = new Set(byProv[prov]);
+    const geo = await getGeoJSON(prov, cpSet);
     if (token !== _renderToken) return;
     if (!geo) continue;
-    const cpSet = new Set(byProv[prov]);
     geo.features.forEach(feat => {
       const raw = feat.properties?.COD_POSTAL || feat.properties?.cp || '';
       const cp = String(raw).padStart(5,'0');
