@@ -729,7 +729,9 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 function buildCentroButtons() {
-  _allCentros = Object.keys(ALL_SCENARIOS).sort();
+  const all = Object.keys(ALL_SCENARIOS).sort();
+  _notOpenYet = all.filter(c => !isOpenToday(c));
+  _allCentros = all.filter(isOpenToday);
   renderCentroOptions(_allCentros);
 }
 
@@ -870,7 +872,8 @@ function syncCentroOptions() {
     all.classList.toggle('partial', nVis > 0 && nVis < _visibleCentros.length);
   }
   const cnt = document.getElementById('centroDropdownCount');
-  if (cnt) cnt.textContent = `${_pendingCentros.size} de ${_allCentros.length}`;
+  if (cnt) cnt.textContent = `${_pendingCentros.size} de ${_allCentros.length}` + (_notOpenYet.length ? ` · ${_notOpenYet.length} aún sin abrir` : '');
+  if (cnt) cnt.title = _notOpenYet.length ? 'Sin abrir todavía: ' + _notOpenYet.map(c => { const i = centroInfo(c); return `${c.toUpperCase()} (${i.fsd.split('-').reverse().join('/')})`; }).join(', ') : '';
 }
 
 function toggleCentroOption(c) {
@@ -976,7 +979,7 @@ function buildMultiScenarios(centros) {
 }
 
 function setCentros(centros, scIdx) {
-  centros = [...new Set(centros)].filter(c => ALL_SCENARIOS[c]).sort();
+  centros = [...new Set(centros)].filter(c => ALL_SCENARIOS[c] && isOpenToday(c)).sort();
   activeCentros = centros;
   activeCentro = centros[0] || null;
   _multiScenarios = isMulti() ? buildMultiScenarios(centros) : [];
@@ -1413,6 +1416,14 @@ const ICON_STORE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 44 
 </svg>`;
 // Colmena/panal = está en la lista de colmenas o tiene código tipo mad1/pan2; el resto son tiendas
 function centroInfo(code) { return COLMENAS.find(c => c.code === code); }
+// Un centro cuenta como abierto si no tiene fecha de primer servicio o si ya ha
+// llegado; los que abren en el futuro se ocultan hasta ese día (se evalúa con
+// la fecha del ordenador cada vez que se carga la página o el CSV).
+function isOpenToday(code) {
+  const i = centroInfo(code);
+  return !i || !i.fsd || i.fsd <= isoDate(new Date());
+}
+let _notOpenYet = []; // centros del CSV aún sin abrir (ocultos)
 function isColmena(code) {
   const i = centroInfo(code);
   return i ? (i.type === 'hive' || i.type === 'panal') : /^[a-z]{3}\d$/i.test(code);
@@ -2598,6 +2609,7 @@ function findSearchResults(query) {
   const today = new Date(); today.setHours(0,0,0,0);
 
   Object.entries(ALL_SCENARIOS).forEach(([centro, scenarios]) => {
+    if (!isOpenToday(centro)) return; // aún sin abrir: no aparece
     if (isNumeric) {
       // Recopilar todos los escenarios donde aparece cada CP que coincide
       const cpMatches = {}; // cp -> [{ scIdx, sc }]
