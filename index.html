@@ -1291,6 +1291,11 @@ function initMaps() {
   const syncZoomClass = () => leafletMap.getContainer().classList.toggle('zoomed-in', leafletMap.getZoom() >= 11);
   leafletMap.on('zoomend', () => { syncZoomClass(); mapLayers1.forEach(restyleLayer); mapLayers2.forEach(restyleLayer); });
   syncZoomClass();
+  // red de seguridad del resaltado (ver clearHover)
+  leafletMap.on('zoomstart mouseout', clearHover);
+  leafletMap.getContainer().addEventListener('mousemove', ev => {
+    if (_hoveredLayer && ev.target !== _hoveredLayer._path) clearHover();
+  });
   leafletMap.on('zoomstart', (e) => {
     if (e.originalEvent) setMapViewLocked(true);
   });
@@ -1593,9 +1598,25 @@ function selectArea(area, opts = {}) {
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && selectedArea && !e.target.closest('input,textarea')) selectArea(null);
 });
+// Resaltado al pasar el cursor: solo un polígono a la vez. Al traerlo al frente
+// el navegador a veces no avisa del «mouseout» y el color se quedaba encendido,
+// así que se limpia también al mover el ratón fuera de él, salir del mapa o hacer zoom.
+let _hoveredLayer = null;
+function clearHover() {
+  const t = _hoveredLayer; _hoveredLayer = null;
+  if (t && t._resetHover) t._resetHover();
+}
 function hoverStyle(e) {
-  e.target.setStyle({ weight: 2.6, fillOpacity: Math.min(0.8, (e.target.options.fillOpacity || 0.5) + 0.22) });
-  e.target.bringToFront();
+  const t = e.target;
+  if (_hoveredLayer && _hoveredLayer !== t) clearHover();
+  if (_hoveredLayer === t) return;
+  _hoveredLayer = t;
+  t.setStyle({ weight: 2.6, fillOpacity: Math.min(0.8, (t.options.fillOpacity || 0.5) + 0.22) });
+  t.bringToFront();
+}
+function hoverOut(e) {
+  if (_hoveredLayer === e.target) clearHover();
+  else if (e.target._resetHover) e.target._resetHover();
 }
 
 function clearMap1() {
@@ -1683,9 +1704,10 @@ async function renderMap() {
       const lyr = L.geoJSON(feat, {
         style: polyStyle(centerColor, 0.6),
         onEachFeature: (_f, layer) => {
+          layer._resetHover = () => layer.setStyle(polyStyle(centerColor, 0.6));
           layer.on({
             mouseover: hoverStyle,
-            mouseout(e){ e.target.setStyle(polyStyle(centerColor, 0.6)); },
+            mouseout: hoverOut,
             click(e){ L.popup().setLatLng(e.latlng)
               .setContent(makePopupCentro(cp, centerColor, centro))
               .openOn(leafletMap); }
@@ -1772,9 +1794,10 @@ async function renderMapAreas() {
         style: polyStyle(color, AREA_OP),
         onEachFeature: (_f, layer) => {
           layer._cpArea = area;
+          layer._resetHover = () => layer.setStyle(hiddenAreas.has(area) ? {fillOpacity:0, opacity:0} : polyStyle(areaColors[area] || color, AREA_OP, area));
           layer.on({
             mouseover: hoverStyle,
-            mouseout(e){ e.target.setStyle(hiddenAreas.has(area) ? {fillOpacity:0, opacity:0} : polyStyle(areaColors[area] || color, AREA_OP, area)); },
+            mouseout: hoverOut,
             click(e){ L.popup().setLatLng(e.latlng)
               .setContent(makePopupArea(cp, area, color, getActiveScenario()))
               .openOn(leafletMap2); }
