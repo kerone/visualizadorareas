@@ -1242,7 +1242,11 @@ L.Map.SmoothWheelZoom = L.Handler.extend({
       if (typeof setMapViewLocked === 'function') setMapViewLocked(true);
     }
     this._mouse = map.mouseEventToContainerPoint(e);
-    this._goal = map._limitZoom(this._goal + L.DomEvent.getWheelDelta(e) * 0.003 * map.options.smoothSensitivity);
+    // Un golpe de rueda (≈100 px) = un nivel de zoom, igual que el zoom original de Leaflet;
+    // se normaliza a píxeles para que vaya igual en Windows, Mac y Firefox
+    const px = e.deltaMode === 1 ? e.deltaY * 33 : e.deltaMode === 2 ? e.deltaY * 800 : e.deltaY;
+    const dz = Math.max(-1, Math.min(1, -px / 100)) * map.options.smoothSensitivity;
+    this._goal = map._limitZoom(this._goal + dz);
     clearTimeout(this._endTimer);
     this._endTimer = setTimeout(() => this._end(), 220);
     L.DomEvent.preventDefault(e); L.DomEvent.stopPropagation(e);
