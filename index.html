@@ -1225,7 +1225,7 @@ function renderSidebar() {
 
 // ── MAPS ──────────────────────────────────────────────────────────────────────
 function initMaps() {
-  leafletMap = L.map('map', {zoomControl:true, attributionControl:false, zoomSnap:0.25, zoomDelta:0.5, wheelPxPerZoomLevel:140, wheelDebounceTime:30}).setView([39.5, -3], 6);
+  leafletMap = L.map('map', {zoomControl:true, attributionControl:false, zoomSnap:0.25, zoomDelta:0.5, wheelPxPerZoomLevel:90, wheelDebounceTime:30}).setView([39.5, -3], 6);
   L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&hl=es&gl=ES&x={x}&y={y}&z={z}',{attribution:'© Google',maxZoom:18,subdomains:'0123'}).addTo(leafletMap);
   leafletMap2 = leafletMap; // same map for both modes
 
