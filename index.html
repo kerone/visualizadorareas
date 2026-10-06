@@ -1224,8 +1224,57 @@ function renderSidebar() {
 }
 
 // ── MAPS ──────────────────────────────────────────────────────────────────────
+// Zoom continuo con la rueda: en vez de saltar de nivel en nivel, el mapa se
+// acerca poco a poco hacia el punto del ratón mientras gira la rueda
+// (basado en Leaflet.SmoothWheelZoom, licencia MIT)
+L.Map.mergeOptions({ smoothWheelZoom: true, smoothSensitivity: 1 });
+L.Map.SmoothWheelZoom = L.Handler.extend({
+  addHooks() { L.DomEvent.on(this._map._container, 'wheel', this._onWheel, this); },
+  removeHooks() { L.DomEvent.off(this._map._container, 'wheel', this._onWheel, this); },
+  _onWheel(e) {
+    const map = this._map;
+    if (!this._wheeling) {
+      this._wheeling = true; this._moved = false;
+      map._stop(); if (map._panAnim) map._panAnim.stop();
+      this._goal = map.getZoom();
+      this._startLatLng = map.containerPointToLatLng(map.mouseEventToContainerPoint(e));
+      this._raf = requestAnimationFrame(() => this._step());
+      if (typeof setMapViewLocked === 'function') setMapViewLocked(true);
+    }
+    this._mouse = map.mouseEventToContainerPoint(e);
+    this._goal = map._limitZoom(this._goal + L.DomEvent.getWheelDelta(e) * 0.003 * map.options.smoothSensitivity);
+    clearTimeout(this._endTimer);
+    this._endTimer = setTimeout(() => this._end(), 220);
+    L.DomEvent.preventDefault(e); L.DomEvent.stopPropagation(e);
+  },
+  _step() {
+    const map = this._map, z0 = map.getZoom();
+    let z = z0 + (this._goal - z0) * 0.25;
+    if (Math.abs(this._goal - z) < 0.005) z = this._goal;
+    if (z !== z0) {
+      const delta = this._mouse.subtract(map.getSize()._divideBy(2));
+      const center = map.unproject(map.project(this._startLatLng, z).subtract(delta), z);
+      if (!this._moved) { map._moveStart(true, false); this._moved = true; }
+      map._move(center, z);
+    }
+    this._raf = requestAnimationFrame(() => this._step());
+  },
+  _end() {
+    this._wheeling = false;
+    cancelAnimationFrame(this._raf);
+    const map = this._map;
+    // termina de llegar al objetivo antes de soltar
+    if (this._moved && Math.abs(map.getZoom() - this._goal) > 0.001) {
+      const delta = this._mouse.subtract(map.getSize()._divideBy(2));
+      map._move(map.unproject(map.project(this._startLatLng, this._goal).subtract(delta), this._goal), this._goal);
+    }
+    if (this._moved) map._moveEnd(true);
+  }
+});
+L.Map.addInitHook('addHandler', 'smoothWheelZoom', L.Map.SmoothWheelZoom);
+
 function initMaps() {
-  leafletMap = L.map('map', {zoomControl:true, attributionControl:false, zoomSnap:0.25, zoomDelta:0.5, wheelPxPerZoomLevel:90, wheelDebounceTime:30}).setView([39.5, -3], 6);
+  leafletMap = L.map('map', {zoomControl:true, attributionControl:false, zoomSnap:0.25, zoomDelta:0.5, scrollWheelZoom:false, smoothWheelZoom:true, smoothSensitivity:1}).setView([39.5, -3], 6);
   L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&hl=es&gl=ES&x={x}&y={y}&z={z}',{attribution:'© Google',maxZoom:18,subdomains:'0123'}).addTo(leafletMap);
   leafletMap2 = leafletMap; // same map for both modes
 
