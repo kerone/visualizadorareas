@@ -1237,16 +1237,18 @@ L.Map.SmoothWheelZoom = L.Handler.extend({
       this._wheeling = true; this._moved = false;
       map._stop(); if (map._panAnim) map._panAnim.stop();
       this._goal = map.getZoom();
-      this._startLatLng = map.containerPointToLatLng(map.mouseEventToContainerPoint(e));
       this._raf = requestAnimationFrame(() => this._step());
       if (typeof setMapViewLocked === 'function') setMapViewLocked(true);
     }
+    // el ancla sigue al ratón: el punto que hay bajo el cursor ahora es el que se queda quieto
     this._mouse = map.mouseEventToContainerPoint(e);
+    this._startLatLng = map.containerPointToLatLng(this._mouse);
     // Un golpe de rueda (≈100 px) = un nivel de zoom, igual que el zoom original de Leaflet;
     // se normaliza a píxeles para que vaya igual en Windows, Mac y Firefox
     const px = e.deltaMode === 1 ? e.deltaY * 33 : e.deltaMode === 2 ? e.deltaY * 800 : e.deltaY;
     const dz = Math.max(-1, Math.min(1, -px / 100)) * map.options.smoothSensitivity;
-    this._goal = map._limitZoom(this._goal + dz);
+    // sin redondear al paso del zoom: los giros pequeños (trackpad, ratón de precisión) se perdían
+    this._goal = Math.max(map.getMinZoom(), Math.min(map.getMaxZoom(), this._goal + dz));
     clearTimeout(this._endTimer);
     this._endTimer = setTimeout(() => this._end(), 220);
     L.DomEvent.preventDefault(e); L.DomEvent.stopPropagation(e);
