@@ -1120,9 +1120,22 @@ function updatePageHeader() {
     const c = cs[0], i = info(c);
     title.textContent = i ? `${c.toUpperCase()} · ${titleCase(i.name)}` : c.toUpperCase();
     meta.textContent = i ? `${titleCase(i.street)}, ${i.cp} ${i.town}` : 'Sin datos de ubicación para este centro';
-  } else {
+  } else if (cs.length <= 3) {
     title.textContent = selectionLabel();
     meta.innerHTML = `${cs.length} centros${sep}` + cs.map(c => { const i = info(c); return escHtml(i ? titleCase(i.name) : c.toUpperCase()); }).join(', ');
+  } else {
+    // Con muchos centros la lista de códigos y nombres no aporta: resumen por tipo
+    const all = typeof _allCentros !== 'undefined' && _allCentros.length && _allCentros.every(c => cs.includes(c));
+    title.textContent = all ? `Todos los centros (${cs.length})` : `${cs.length} centros seleccionados`;
+    const n = { hive: 0, panal: 0, store: 0, otro: 0 };
+    cs.forEach(c => { const t = info(c)?.type; n[t in n ? t : (isColmena(c) ? 'hive' : 'otro')]++; });
+    const pl = (k, a, b) => `${k} ${k === 1 ? a : b}`;
+    const parts = [];
+    if (n.hive) parts.push(pl(n.hive, 'colmena', 'colmenas'));
+    if (n.panal) parts.push(pl(n.panal, 'panal', 'panales'));
+    if (n.store) parts.push(pl(n.store, 'tienda', 'tiendas'));
+    if (n.otro) parts.push(pl(n.otro, 'otro centro', 'otros centros'));
+    meta.innerHTML = parts.join(sep);
   }
 }
 
