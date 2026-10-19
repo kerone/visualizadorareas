@@ -214,7 +214,21 @@ button{font-family:inherit}
 .cp-tag.model{background:#eef0fb;color:#3d4aa8}
 .cp-tag{font-size:10.5px;font-weight:600;padding:0 6px;border-radius:20px;background:#f2f2ef;color:#3b3b38;white-space:nowrap}
 .cp-tag.new{background:var(--accent-soft);color:var(--accent-dark)}
-.cp-tag.removed{background:#fdecea;color:#b42318;text-decoration:line-through}
+.cp-tag.removed{background:#fdecea;color:#b42318}
+.cp-tag.removed s{text-decoration:line-through}
+.cp-tag small{font-size:10px;font-weight:700;opacity:.75}
+.tl-item.active .cp-tag[data-cp]{cursor:pointer}
+.tl-item.active .cp-tag[data-cp]:hover{outline:1.5px solid currentColor}
+.sc-centro-row{display:flex;align-items:center;flex-wrap:wrap;gap:5px;margin-top:6px;font-size:12px}
+.sc-centro-row b{font-weight:700;margin-right:2px}
+.sc-centro-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.sc-n{font-size:11px;font-weight:700;padding:1px 7px;border-radius:20px}
+.sc-n.pos{background:var(--accent-soft);color:var(--accent-dark)}
+.sc-n.neg{background:#fdecea;color:#b42318}
+.sc-n.model{background:#eef0fb;color:#3d4aa8}
+.sc-centro-more{font-size:11px;color:var(--muted);margin-top:4px}
+.sc-centro-block{margin-top:8px;padding-top:6px;border-top:1px dashed var(--border)}
+.sc-centro-block:first-of-type{border-top:none;padding-top:0}
 .cp-tag.moved{background:#fdf4e3;color:#9a6700}
 
 /* Panel Áreas */
@@ -795,9 +809,36 @@ let CPC_SCENARIOS = {}; // escenarios de la vista Centro, con la misma forma que
 const cpEpoch = () => Date.UTC(2026, 3, 1);
 function cpDay(iso) { const [y, m, d] = iso.split('-').map(Number); return Math.round((Date.UTC(y, m - 1, d) - cpEpoch()) / 864e5); }
 function cpIso(n) { return new Date(cpEpoch() + n * 864e5).toISOString().slice(0, 10); }
+let CPC_OWNERS = {}; // cp → [[centro, desde, hasta], …]
 function setCpCentros(data, meta) {
   CP_CENTROS = data || null; CP_CENTROS_META = meta || null;
   CPC_SCENARIOS = buildCpcScenarios(CP_CENTROS);
+  CPC_OWNERS = {};
+  Object.entries(CP_CENTROS || {}).forEach(([c, rows]) => rows.forEach(([cp, d0, d1]) => (CPC_OWNERS[cp] = CPC_OWNERS[cp] || []).push([c, d0, d1])));
+}
+// Centro (distinto de «exclude») que sirve un CP en una fecha, aunque no esté seleccionado
+function cpOwnerAt(cp, iso, exclude) {
+  if (!iso || !CPC_OWNERS[cp]) return '';
+  const d = cpDay(iso);
+  const hit = CPC_OWNERS[cp].find(([c, d0, d1]) => c !== exclude && d0 <= d && (d1 < 0 || d <= d1));
+  return hit ? hit[0] : '';
+}
+// Modelo NTC de cada centro en un escenario de la vista Centro
+function scModels(x) {
+  return x.models || (x.model !== undefined && x.model !== null && activeCentro ? { [activeCentro]: x.model } : {});
+}
+// Qué le pasa a cada centro entre dos escenarios de la vista Centro: CPs que
+// gana (y de quién vienen), que pierde (y a quién van) y cambio de modelo
+function centroChanges(prev, sc) {
+  const P = prev.cp_areas || {}, C = sc.cp_areas || {};
+  const dPrev = prev.to || (sc.from ? isoAddDays(sc.from, -1) : null), dCur = sc.from;
+  const out = {}, get = c => (out[c] = out[c] || { gain: [], lose: [], model: null });
+  Object.entries(C).forEach(([cp, c]) => { if (P[cp] !== c) get(c).gain.push([cp, P[cp] || cpOwnerAt(cp, dPrev, c)]); });
+  Object.entries(P).forEach(([cp, c]) => { if (C[cp] !== c) get(c).lose.push([cp, C[cp] || cpOwnerAt(cp, dCur, c)]); });
+  const pm = scModels(prev), cm = scModels(sc);
+  Object.keys(cm).forEach(c => { if (c in pm && pm[c] !== cm[c]) get(c).model = [pm[c], cm[c]]; });
+  Object.values(out).forEach(x => { x.gain.sort(); x.lose.sort(); });
+  return out;
 }
 function buildCpcScenarios(data) {
   const out = {};
@@ -1463,6 +1504,15 @@ function renderSidebar() {
   const full = iso => { const [y,m,d] = iso.split('-'); return `${d}/${m}/${y}`; };
   const timeline = document.createElement('div');
   timeline.className = 'timeline';
+  // Clic en un CP de la tarjeta: se marca en el mapa (sin cambiar de escenario)
+  timeline.addEventListener('click', (e) => {
+    const t = e.target.closest('.tl-item.active [data-cp]');
+    if (!t) return;
+    e.stopPropagation();
+    const cp = t.dataset.cp, layers = activeTab === 'mapa' ? cpToLayer1 : cpToLayer2;
+    if (layers[cp]) flashCp(cp, layers, leafletMap);
+    else showToast(`El CP ${cp} no forma parte de la selección en este periodo`);
+  }, true);
   let lastGroup = null;
   const isPastSc = sc => !scCoversIso(sc, todayIso) && !(sc.from && sc.from > todayIso);
   const pastCount = scenarios.filter(isPastSc).length;
@@ -1493,10 +1543,45 @@ function renderSidebar() {
     item.onclick = () => setScenario(origIdx);
 
     let badgeHtml = '', detailHtml = '', modelOnly = false;
-    // Modelo NTC de cada centro en este periodo (vista Centro)
-    const modelsOf = x => x.models || (x.model !== undefined && x.model !== null && activeCentro ? { [activeCentro]: x.model } : {});
+    const modelsOf = scModels;
     const mTxt = m => m || 'sin modelo';
-    if (origIdx > 0) {
+    const cpcView = activeTab === 'mapa' && !!CP_CENTROS;
+    if (origIdx > 0 && cpcView) {
+      // Vista Centro: qué le pasa a cada centro (CPs que gana/pierde con su origen o destino y modelo)
+      const ch = centroChanges(scenarios[origIdx-1], sc);
+      const U = c => c ? String(c).toUpperCase() : '';
+      const gainTag = ([cp, from]) => `<span class="cp-tag new" data-cp="${cp}" title="${from ? 'Viene de ' + U(from) : 'CP nuevo'}">+${cp}${from ? ` <small>← ${U(from)}</small>` : ''}</span>`;
+      const loseTag = ([cp, to]) => `<span class="cp-tag removed" data-cp="${cp}" title="${to ? 'Pasa a ' + U(to) : 'Deja de tener centro'}"><s>${cp}</s>${to ? ` <small>→ ${U(to)}</small>` : ''}</span>`;
+      const order = Object.keys(ch).sort((a, b) => (isColmena(b) - isColmena(a)) || a.localeCompare(b));
+      modelOnly = order.length > 0 && order.every(c => !ch[c].gain.length && !ch[c].lose.length);
+      if (!isMulti()) {
+        const x = ch[activeCentro] || { gain: [], lose: [], model: null };
+        const net = x.gain.length - x.lose.length;
+        const parts = [];
+        if (x.gain.length) parts.push(`+${x.gain.length}`);
+        if (x.lose.length) parts.push(`−${x.lose.length}`);
+        if (parts.length) badgeHtml = `<span class="${net > 0 ? 'sc-changed-pos' : net < 0 ? 'sc-changed-neg' : 'sc-changed-mix'}">${parts.join(' · ')} CP</span>`;
+        if (x.model) badgeHtml += `<span class="sc-model-chg">${mTxt(x.model[0])} → ${mTxt(x.model[1])}</span>`;
+        if (active) {
+          if (x.gain.length) detailHtml += `<div class="sc-detail">Gana</div><div class="sc-cp-diff">${x.gain.map(gainTag).join('')}</div>`;
+          if (x.lose.length) detailHtml += `<div class="sc-detail">Pierde</div><div class="sc-cp-diff">${x.lose.map(loseTag).join('')}</div>`;
+          if (x.model) detailHtml += `<div class="sc-detail">Cambio de modelo</div><div class="sc-cp-diff"><span class="cp-tag model">${mTxt(x.model[0])} → ${mTxt(x.model[1])}</span></div>`;
+        }
+      } else {
+        const row = c => { const x = ch[c]; return `<div class="sc-centro-row"><span class="sc-centro-dot" style="background:${CENTRO_COLORS[c]}"></span><b>${U(c)}</b>`
+          + (x.gain.length ? `<span class="sc-n pos">+${x.gain.length} CP</span>` : '')
+          + (x.lose.length ? `<span class="sc-n neg">−${x.lose.length} CP</span>` : '')
+          + (x.model ? `<span class="sc-n model">${mTxt(x.model[0])} → ${mTxt(x.model[1])}</span>` : '') + `</div>`; };
+        if (!active) {
+          const MAX = 5;
+          badgeHtml = order.slice(0, MAX).map(row).join('') + (order.length > MAX ? `<div class="sc-centro-more">+${order.length - MAX} centros más</div>` : '');
+        } else {
+          detailHtml = order.map(c => `<div class="sc-centro-block">${row(c)}`
+            + (ch[c].gain.length || ch[c].lose.length ? `<div class="sc-cp-diff">${ch[c].gain.map(gainTag).join('')}${ch[c].lose.map(loseTag).join('')}</div>` : '')
+            + `</div>`).join('');
+        }
+      }
+    } else if (origIdx > 0) {
       const prev = scenarios[origIdx-1].cp_areas, curr = sc.cp_areas;
       const added = [], removed = [], changed = [];
       Object.entries(curr).forEach(([cp, area]) => {
@@ -1519,8 +1604,8 @@ function renderSidebar() {
         modelOnly = !parts.length;
       }
       if (active) {
-        if (added.length) detailHtml += `<div class="sc-detail">Gana</div><div class="sc-cp-diff">${added.map(cp => `<span class="cp-tag new">+${cp}</span>`).join('')}</div>`;
-        if (removed.length) detailHtml += `<div class="sc-detail">Pierde</div><div class="sc-cp-diff">${removed.map(cp => `<span class="cp-tag removed">${cp}</span>`).join('')}</div>`;
+        if (added.length) detailHtml += `<div class="sc-detail">Gana</div><div class="sc-cp-diff">${added.map(cp => `<span class="cp-tag new" data-cp="${cp}">+${cp}</span>`).join('')}</div>`;
+        if (removed.length) detailHtml += `<div class="sc-detail">Pierde</div><div class="sc-cp-diff">${removed.map(cp => `<span class="cp-tag removed" data-cp="${cp}"><s>${cp}</s></span>`).join('')}</div>`;
         const nm = a => activeTab === 'mapa' && CP_CENTROS ? String(a).toUpperCase() : a;
         if (changed.length) detailHtml += `<div class="sc-detail">${activeTab === 'mapa' && CP_CENTROS ? 'Cambian de centro' : 'Reasignados'}</div><div class="sc-cp-diff">${changed.map(cp => `<span class="cp-tag moved">${cp}: ${nm(prev[cp])} → ${nm(curr[cp])}</span>`).join('')}</div>`;
         if (mch.length) detailHtml += `<div class="sc-detail">Cambio de modelo</div><div class="sc-cp-diff">${mch.map(c => `<span class="cp-tag model">${isMulti() ? c.toUpperCase() + ': ' : ''}${mTxt(pm[c])} → ${mTxt(cm[c])}</span>`).join('')}</div>`;
