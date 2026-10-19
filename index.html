@@ -900,9 +900,13 @@ function pendingChanged() {
   const next = [..._pendingCentros].sort();
   return next.length !== activeCentros.length || next.some((c, i) => c !== activeCentros[i]);
 }
+// Centros seleccionados al abrir el desplegable: se listan arriba (orden fijo
+// mientras está abierto, para que no salten al marcar/desmarcar)
+let _selAtOpen = new Set();
 function openOmni() {
   if (omniIsOpen()) return;
   _pendingCentros = new Set(activeCentros);
+  _selAtOpen = new Set(activeCentros);
   renderOmni(document.getElementById('cpSearchInput').value);
   _omniOutsideClick = (e) => {
     const w = document.getElementById('omniWrap');
@@ -957,17 +961,26 @@ function renderOmniChips() {
 
 function renderCentroOptions(list) {
   // Colmenas y panales primero (son los más consultados), tiendas después
-  list = [...list].sort((a, b) => (isColmena(b) - isColmena(a)) || a.localeCompare(b));
-  _visibleCentros = list;
+  // y, si hay una selección hecha (p. ej. una zona entera), esa va arriba del todo
+  const byType = (a, b) => (isColmena(b) - isColmena(a)) || a.localeCompare(b);
+  list = [...list].sort(byType);
+  const sel = list.filter(c => _selAtOpen.has(c));
+  const rest = sel.length && sel.length < list.length ? list.filter(c => !_selAtOpen.has(c)) : list;
+  const ordered = rest === list ? list : [...sel, ...rest];
+  _visibleCentros = ordered;
   const container = document.getElementById('centroDropdownList');
   container.innerHTML = '';
-  const nColm = list.filter(isColmena).length;
-  const mixed = nColm > 0 && nColm < list.length;
-  list.forEach((c, i) => {
-    if (mixed && (i === 0 || i === nColm)) {
+  const heads = {};
+  if (rest !== list) heads[0] = `Seleccionados (${sel.length})`;
+  const off = rest === list ? 0 : sel.length;
+  const nColm = rest.filter(isColmena).length;
+  if (nColm > 0 && nColm < rest.length) { heads[off] = 'Colmenas'; heads[off + nColm] = 'Tiendas'; }
+  else if (off) heads[off] = nColm ? 'Colmenas' : 'Tiendas';
+  ordered.forEach((c, i) => {
+    if (heads[i]) {
       const h = document.createElement('div');
       h.className = 'centro-group-head';
-      h.textContent = i === 0 ? 'Colmenas' : 'Tiendas';
+      h.textContent = heads[i];
       container.appendChild(h);
     }
     const div = document.createElement('div');
