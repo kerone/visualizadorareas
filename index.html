@@ -210,6 +210,8 @@ button{font-family:inherit}
 .sc-changed-pos{background:var(--accent-soft);color:var(--accent-dark)}
 .sc-changed-neg{background:#fdecea;color:#b42318}
 .sc-changed-mix{background:#fdf4e3;color:#9a6700}
+.sc-model-chg{display:inline-block;margin-top:8px;margin-left:4px;font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;background:#eef0fb;color:#3d4aa8}
+.cp-tag.model{background:#eef0fb;color:#3d4aa8}
 .cp-tag{font-size:10.5px;font-weight:600;padding:0 6px;border-radius:20px;background:#f2f2ef;color:#3b3b38;white-space:nowrap}
 .cp-tag.new{background:var(--accent-soft);color:var(--accent-dark)}
 .cp-tag.removed{background:#fdecea;color:#b42318;text-decoration:line-through}
@@ -805,20 +807,25 @@ function buildCpcScenarios(data) {
   Object.entries(data).forEach(([c, rows]) => {
     const B = new Set([0]);
     rows.forEach(([, d0, d1]) => { if (d0 > 0) B.add(d0); if (d1 >= 0) B.add(d1 + 1); });
+    // cambios de modelo NTC (versiones de configuración de los datos de centros)
+    const info = centroInfo(c), vers = info && info.type === 'store' && Array.isArray(info.v) ? info.v : [];
+    vers.forEach(v => { if (v[0] > CP_START) B.add(cpDay(v[0])); });
+    const modelAt = iso => { const v = vers.find(v => v[0] <= iso && iso <= v[1]); return v ? v[2] || '' : ''; };
     const days = [...B].sort((a, b) => a - b);
     const per = [];
     days.forEach((d, i) => {
       const cps = [...new Set(rows.filter(r => r[1] <= d && (r[2] < 0 || d <= r[2])).map(r => r[0]))].sort();
-      const key = cps.join(','), to = i < days.length - 1 ? days[i + 1] - 1 : null;
+      const model = vers.length ? modelAt(cpIso(d)) : null;
+      const key = cps.join(',') + '|' + model, to = i < days.length - 1 ? days[i + 1] - 1 : null;
       const prev = per[per.length - 1];
       if (prev && prev.key === key) { prev.to = to; return; }
-      per.push({ key, from: d, to, cps });
+      per.push({ key, from: d, to, cps, model });
     });
     while (per.length > 1 && !per[0].cps.length) per.shift(); // aún sin servicio online
     out[c] = per.map((p, i) => {
       const from = cpIso(p.from), to = p.to === null ? null : cpIso(p.to);
       const cp_areas = {}; p.cps.forEach(cp => { cp_areas[cp] = c; });
-      return { id: `E${i + 1}`, from, to, label: labelOf(from, to), cp_areas, areas: p.cps.length ? [c] : [] };
+      return { id: `E${i + 1}`, from, to, label: labelOf(from, to), cp_areas, areas: p.cps.length ? [c] : [], model: p.model };
     });
   });
   return out;
@@ -907,14 +914,14 @@ function csvCoord(s) {
   return /[SW]/i.test(m[2] || '') ? -v : v;
 }
 // Una fila por versión de configuración → un centro con sus versiones. Se
-// descartan las versiones ya terminadas y se juntan las seguidas con el mismo
-// modelo (es lo único que se usa).
+// descartan las terminadas antes del 01/04/2026 (la cronología empieza ahí) y
+// se juntan las seguidas con el mismo modelo (es lo único que se usa).
 function parseCentrosCSV(text, fileName = '') {
   const rows = csvRows(text);
   const C = centrosCsvCols(rows[0] || []);
   const missing = ['code', 'start', 'end', 'model', 'type', 'lat', 'lng'].filter(k => C[k] < 0);
   if (missing.length) throw new Error('Faltan columnas en el CSV de centros: ' + missing.join(', '));
-  const today = isoDate(new Date()), by = new Map();
+  const by = new Map();
   rows.slice(1).forEach(r => {
     const code = (r[C.code] || '').trim();
     const start = csvIsoDate(r[C.start]), end = csvIsoDate(r[C.end]) || '2999-01-01';
@@ -927,7 +934,7 @@ function parseCentrosCSV(text, fileName = '') {
         street: g('street'), town: g('town'), cp: g('cp'), zone: g('zone'), region: g('region'),
         fsd: csvIsoDate(g('fsd')), v: [] });
     }
-    if (end >= today) by.get(code).v.push([start, end, (r[C.model] || '').trim()]);
+    if (end >= CP_START) by.get(code).v.push([start, end, (r[C.model] || '').trim()]);
   });
   const dayAfter = d => { const x = new Date(d + 'T12:00:00'); x.setDate(x.getDate() + 1); return isoDate(x); };
   const centros = [...by.values()].filter(c => isFinite(c.lat) && isFinite(c.lng)).map(c => {
@@ -1248,10 +1255,11 @@ function buildMultiScenarios(centros) {
       prev.label = labelOf(prev.from, prev.to);
       return;
     }
-    const cp_areas = {}, cp_centro = {}, area_centro = {}, areaKeyOf = {}, areas = [];
+    const cp_areas = {}, cp_centro = {}, area_centro = {}, areaKeyOf = {}, areas = [], models = {};
     centros.forEach(c => {
       if (parts[c] === undefined) return;
       const sc = scenariosOf(c)[parts[c]];
+      if (sc.model !== undefined && sc.model !== null) models[c] = sc.model;
       areaKeyOf[c] = {};
       [...(sc.areas || [])].sort().forEach(a => {
         const k = areaKey(c, a);
@@ -1261,7 +1269,7 @@ function buildMultiScenarios(centros) {
         cp_areas[cp] = areaKey(c, a); cp_centro[cp] = c;
       });
     });
-    out.push({from:p.from, to:p.to, label:labelOf(p.from, p.to), parts, cp_areas, cp_centro, area_centro, areaKeyOf, areas});
+    out.push({from:p.from, to:p.to, label:labelOf(p.from, p.to), parts, cp_areas, cp_centro, area_centro, areaKeyOf, areas, models});
   });
   out.forEach((sc, i) => sc.id = `E${i+1}`);
   return out;
@@ -1484,7 +1492,10 @@ function renderSidebar() {
     item.className = 'tl-item' + (active ? ' active' : '');
     item.onclick = () => setScenario(origIdx);
 
-    let badgeHtml = '', detailHtml = '';
+    let badgeHtml = '', detailHtml = '', modelOnly = false;
+    // Modelo NTC de cada centro en este periodo (vista Centro)
+    const modelsOf = x => x.models || (x.model !== undefined && x.model !== null && activeCentro ? { [activeCentro]: x.model } : {});
+    const mTxt = m => m || 'sin modelo';
     if (origIdx > 0) {
       const prev = scenarios[origIdx-1].cp_areas, curr = sc.cp_areas;
       const added = [], removed = [], changed = [];
@@ -1501,25 +1512,34 @@ function renderSidebar() {
       if (removed.length) parts.push(`−${removed.length}`);
       if (changed.length) parts.push(`${changed.length} reasignados`);
       if (parts.length) badgeHtml = `<span class="${cls}">${parts.join(' · ')} CP</span>`;
+      const pm = modelsOf(scenarios[origIdx-1]), cm = modelsOf(sc);
+      const mch = Object.keys(cm).filter(c => c in pm && pm[c] !== cm[c]).sort();
+      if (mch.length) {
+        badgeHtml += `<span class="sc-model-chg">${mch.length === 1 ? `${isMulti() ? mch[0].toUpperCase() + ' · ' : ''}${mTxt(pm[mch[0]])} → ${mTxt(cm[mch[0]])}` : `${mch.length} cambios de modelo`}</span>`;
+        modelOnly = !parts.length;
+      }
       if (active) {
         if (added.length) detailHtml += `<div class="sc-detail">Gana</div><div class="sc-cp-diff">${added.map(cp => `<span class="cp-tag new">+${cp}</span>`).join('')}</div>`;
         if (removed.length) detailHtml += `<div class="sc-detail">Pierde</div><div class="sc-cp-diff">${removed.map(cp => `<span class="cp-tag removed">${cp}</span>`).join('')}</div>`;
         const nm = a => activeTab === 'mapa' && CP_CENTROS ? String(a).toUpperCase() : a;
         if (changed.length) detailHtml += `<div class="sc-detail">${activeTab === 'mapa' && CP_CENTROS ? 'Cambian de centro' : 'Reasignados'}</div><div class="sc-cp-diff">${changed.map(cp => `<span class="cp-tag moved">${cp}: ${nm(prev[cp])} → ${nm(curr[cp])}</span>`).join('')}</div>`;
+        if (mch.length) detailHtml += `<div class="sc-detail">Cambio de modelo</div><div class="sc-cp-diff">${mch.map(c => `<span class="cp-tag model">${isMulti() ? c.toUpperCase() + ': ' : ''}${mTxt(pm[c])} → ${mTxt(cm[c])}</span>`).join('')}</div>`;
       }
     }
 
     const dates = !sc.from && !sc.to ? 'Sin fechas'
       : !sc.from ? `Hasta ${full(sc.to)}`
       : `${full(sc.from)} - ${sc.to ? full(sc.to) : 'Indefinido'}`;
-    const title = origIdx === 0 ? 'Situación de partida' : 'Reorganización CCPP';
+    const title = origIdx === 0 ? 'Situación de partida' : modelOnly ? 'Cambio de modelo' : 'Reorganización CCPP';
+    const curModels = modelsOf(sc);
+    const modelMeta = !isMulti() && activeCentro in curModels ? ` · Modelo <strong>${escHtml(mTxt(curModels[activeCentro]))}</strong>` : '';
     item.innerHTML = `
       <div class="tl-dot"></div>
       <div class="tl-card">
         ${isCurrent ? '<span class="tl-today">Hoy</span>' : ''}
         <div class="tl-label">${title}</div>
         <div class="tl-sub">${dates}</div>
-        ${active ? `<div class="tl-meta"><strong>${Object.keys(sc.cp_areas).length}</strong> CPs` + (activeTab === 'mapa' && CP_CENTROS ? (isMulti() ? ` · <strong>${sc.areas.length}</strong> centros` : '') : ` · <strong>${sc.areas.length}</strong> áreas`) + `</div>` : ''}
+        ${active ? `<div class="tl-meta"><strong>${Object.keys(sc.cp_areas).length}</strong> CPs` + (activeTab === 'mapa' && CP_CENTROS ? (isMulti() ? ` · <strong>${sc.areas.length}</strong> centros` : modelMeta) : ` · <strong>${sc.areas.length}</strong> áreas`) + `</div>` : ''}
         ${badgeHtml}
         ${detailHtml}
       </div>`;
@@ -2628,6 +2648,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Centros: sustituye la lista en memoria y rehace selector, pines y cabecera (no guarda)
   function applyCentrosLocally(list, meta) {
     COLMENAS = list; CENTROS_META = meta || null;
+    setCpCentros(CP_CENTROS, CP_CENTROS_META); // los cambios de modelo salen en la vista Centro
     buildCentroButtons();
     setCentros(activeCentros.filter(c => isOpenToday(c)));
   }
