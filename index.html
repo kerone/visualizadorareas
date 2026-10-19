@@ -359,7 +359,7 @@ button{font-family:inherit}
     </div>
     <div class="csv-modal-dropzone" id="csvDropzone" style="display:none">
       <div class="csv-modal-icon">🗂️</div>
-      <div class="csv-modal-title">Arrastra el CSV aquí o haz clic para seleccionar</div>
+      <div class="csv-modal-title">Arrastra el CSV de áreas o de centros aquí o haz clic para seleccionar</div>
       <input type="file" id="csvInput" accept=".csv" style="display:none">
     </div>
     <div class="csv-modal-footer" style="gap:10px;flex-wrap:wrap;justify-content:center">
@@ -370,8 +370,11 @@ button{font-family:inherit}
         <button id="csvPreviewBtn" onclick="previewCsv()" class="btn-ghost" title="Cargar el CSV solo en este navegador para revisarlo; no se guarda nada">👁 Ver sin guardar</button>
         <button id="csvConfirmBtn" onclick="confirmApplyCsv()" class="btn-primary btn-danger-solid" title="Sustituye los datos guardados en JSONBin para todos">⚠ Guardar y machacar datos</button>
       </div>
-      <a class="metabase-btn" href="https://metabase.prod.monline/question/34614-areas-centros-26" target="_blank">
-        <span>📊</span> Query
+      <a class="metabase-btn" href="https://metabase.prod.monline/question/34614-areas-centros-26" target="_blank" title="Query de las áreas de cada centro">
+        <span>📊</span> Query áreas
+      </a>
+      <a class="metabase-btn" href="https://metabase.prod.monline/question#eyJkYXRhc2V0X3F1ZXJ5Ijp7ImRhdGFiYXNlIjo3OCwidHlwZSI6InF1ZXJ5IiwicXVlcnkiOnsic291cmNlLXRhYmxlIjo4MzE1NSwiam9pbnMiOlt7ImZpZWxkcyI6ImFsbCIsImFsaWFzIjoiRmFjdCBQbGFuaWZpY2FjaW9uIENlbnRyb3MgQ2VudGVycyAtIENlbnRlciBDb2RlIiwiY29uZGl0aW9uIjpbIj0iLFsiZmllbGQiLDExNDMwNTMseyJiYXNlLXR5cGUiOiJ0eXBlL1RleHQifV0sWyJmaWVsZCIsMTEzNzUzNCx7ImJhc2UtdHlwZSI6InR5cGUvVGV4dCIsImpvaW4tYWxpYXMiOiJGYWN0IFBsYW5pZmljYWNpb24gQ2VudHJvcyBDZW50ZXJzIC0gQ2VudGVyIENvZGUifV1dLCJzb3VyY2UtdGFibGUiOjgyNjg3fV19fSwiZGlzcGxheSI6InRhYmxlIiwidmlzdWFsaXphdGlvbl9zZXR0aW5ncyI6e319" target="_blank" title="Query de los centros: ubicación y versiones de configuración (modelo NTC)">
+        <span>📊</span> Query centros
       </a>
     </div>
   </div>
@@ -691,6 +694,143 @@ let COLMENAS = [
   {code:"4893", mcode:"4893", zone:"Z99", region:"R99", name:"COLMENA VALENCIA 2", type:"hive", lat:39.51328, lng:-0.455843, street:"CL CIUDAD DE LIRIA (POL. FTE. PATERNA) 5", town:"Paterna", cp:"46988", parent:"", opening:"31/12/2028"},
 ];
 
+// ── DATOS DE CENTROS (query de centros) ─────────────────────────────────────
+// Origen, por orden: el bin de JSONBin de centros (compartido por todos), la
+// copia guardada en este navegador o data/centros.json (el del repositorio);
+// entre estos dos últimos gana el export más reciente.
+const CENTROS_BIN_ID  = ''; // vacío = «Guardar» solo guarda en este navegador
+const CENTROS_BIN_URL = CENTROS_BIN_ID ? `https://api.jsonbin.io/v3/b/${CENTROS_BIN_ID}` : null;
+const CENTROS_LS_KEY  = 'centrosV2';
+let CENTROS_META = null; // {file, date, n}
+
+function centrosPayloadOk(rec) {
+  const list = Array.isArray(rec) ? rec : rec && rec.centros;
+  return Array.isArray(list) && list.length ? { centros: list, meta: (rec && rec.meta) || null } : null;
+}
+async function loadCentros() {
+  if (CENTROS_BIN_URL) {
+    try {
+      const res = await fetch(CENTROS_BIN_URL + '/latest', { headers: { 'X-Master-Key': JSONBIN_API_KEY } });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const got = centrosPayloadOk((await res.json()).record);
+      if (got) { COLMENAS = got.centros; CENTROS_META = got.meta; return 'bin'; }
+    } catch (e) { console.warn('JSONBin centros:', e); }
+  }
+  let local = null, file = null;
+  if (!CENTROS_BIN_URL) { try { local = centrosPayloadOk(JSON.parse(localStorage.getItem(CENTROS_LS_KEY) || 'null')); } catch (_) {} }
+  try { const r = await fetch('data/centros.json'); if (r.ok) file = centrosPayloadOk(await r.json()); } catch (_) {}
+  const date = x => (x && x.meta && x.meta.date) || '';
+  const pick = local && (!file || date(local) > date(file)) ? local : file;
+  if (pick) { COLMENAS = pick.centros; CENTROS_META = pick.meta; return pick === local ? 'local' : 'file'; }
+  return null; // se queda la lista embebida de colmenas
+}
+async function saveCentros(list, meta) {
+  const body = { meta, centros: list };
+  if (!CENTROS_BIN_URL) {
+    localStorage.setItem(CENTROS_LS_KEY, JSON.stringify(body));
+    return 'local';
+  }
+  const res = await fetch(CENTROS_BIN_URL, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', 'X-Master-Key': JSONBIN_API_KEY },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) throw new Error(`JSONBin PUT failed: HTTP ${res.status}`);
+  return 'bin';
+}
+
+// CSV con comillas (las coordenadas llevan coma decimal: "38,33850900° N")
+function csvRows(text) {
+  const rows = []; let row = [], cur = '', q = false;
+  text = text.replace(/^﻿/, '');
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (q) {
+      if (ch === '"') { if (text[i + 1] === '"') { cur += '"'; i++; } else q = false; }
+      else cur += ch;
+    } else if (ch === '"') q = true;
+    else if (ch === ',') { row.push(cur); cur = ''; }
+    else if (ch === '\n' || ch === '\r') {
+      if (ch === '\r' && text[i + 1] === '\n') i++;
+      row.push(cur); cur = '';
+      if (row.some(c => c !== '')) rows.push(row);
+      row = [];
+    } else cur += ch;
+  }
+  row.push(cur); if (row.some(c => c !== '')) rows.push(row);
+  return rows;
+}
+// Columnas de la query de centros: las de la versión van sueltas («Start Date»…)
+// y las del centro llegan con el prefijo del join («… → Center Type»)
+function centrosCsvCols(headers) {
+  const norm = h => h.trim().toLowerCase();
+  const own = n => headers.findIndex(h => !h.includes('→') && norm(h) === n);
+  const joined = n => { const i = headers.findIndex(h => h.includes('→') && norm(h.split('→').pop()) === n); return i >= 0 ? i : own(n); };
+  return {
+    code: own('center code'), start: own('start date'), end: own('end date'), model: own('ntc model'),
+    mcode: joined('mercadona center code'), type: joined('center type'), name: joined('center name'),
+    zone: joined('center zone'), region: joined('region'), town: joined('town'), street: joined('street'),
+    cp: joined('postal code'), fsd: joined('first service date'), lat: joined('latitude'), lng: joined('longitude')
+  };
+}
+function isCentrosCsv(text) {
+  const head = csvRows(text.slice(0, 5000))[0] || [];
+  const C = centrosCsvCols(head);
+  return C.start >= 0 && C.end >= 0 && C.type >= 0;
+}
+function csvIsoDate(s) {
+  s = String(s || '').trim();
+  let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (m) return `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
+  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  return m ? `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` : '';
+}
+function csvCoord(s) {
+  const m = String(s || '').trim().match(/^(-?[\d.,]+)\s*°?\s*([NSEW])?/i);
+  if (!m) return NaN;
+  const v = parseFloat(m[1].replace(',', '.'));
+  return /[SW]/i.test(m[2] || '') ? -v : v;
+}
+// Una fila por versión de configuración → un centro con sus versiones. Se
+// descartan las versiones ya terminadas y se juntan las seguidas con el mismo
+// modelo (es lo único que se usa).
+function parseCentrosCSV(text, fileName = '') {
+  const rows = csvRows(text);
+  const C = centrosCsvCols(rows[0] || []);
+  const missing = ['code', 'start', 'end', 'model', 'type', 'lat', 'lng'].filter(k => C[k] < 0);
+  if (missing.length) throw new Error('Faltan columnas en el CSV de centros: ' + missing.join(', '));
+  const today = isoDate(new Date()), by = new Map();
+  rows.slice(1).forEach(r => {
+    const code = (r[C.code] || '').trim();
+    const start = csvIsoDate(r[C.start]), end = csvIsoDate(r[C.end]) || '2999-01-01';
+    if (!code || !start) return;
+    if (!by.has(code)) {
+      const lat = csvCoord(r[C.lat]), lng = csvCoord(r[C.lng]);
+      const g = k => C[k] >= 0 ? (r[C[k]] || '').trim() : '';
+      by.set(code, { code, mcode: g('mcode'), name: g('name'), type: g('type').toLowerCase(),
+        lat: Math.round(lat * 1e6) / 1e6, lng: Math.round(lng * 1e6) / 1e6,
+        street: g('street'), town: g('town'), cp: g('cp'), zone: g('zone'), region: g('region'),
+        fsd: csvIsoDate(g('fsd')), v: [] });
+    }
+    if (end >= today) by.get(code).v.push([start, end, (r[C.model] || '').trim()]);
+  });
+  const dayAfter = d => { const x = new Date(d + 'T12:00:00'); x.setDate(x.getDate() + 1); return isoDate(x); };
+  const centros = [...by.values()].filter(c => isFinite(c.lat) && isFinite(c.lng)).map(c => {
+    const merged = [];
+    c.v.sort((a, b) => a[0] < b[0] ? -1 : 1).forEach(v => {
+      const last = merged[merged.length - 1];
+      if (last && last[2] === v[2] && dayAfter(last[1]) === v[0]) last[1] = v[1];
+      else merged.push(v.slice());
+    });
+    c.v = merged;
+    return c;
+  });
+  if (!centros.length) throw new Error('El CSV de centros no tiene filas válidas');
+  const m = fileName.match(/(\d{4}-\d{2}-\d{2})T(\d{2})_(\d{2})_(\d{2})/);
+  const date = m ? `${m[1]}T${m[2]}:${m[3]}:${m[4]}` : new Date().toISOString().slice(0, 19);
+  return { centros, meta: { file: fileName, date, n: centros.length } };
+}
+
 // ── STATE ────────────────────────────────────────────────────────────────────
 let activeCentro = null;         // primer centro seleccionado
 let activeCentros = [];          // todos los centros seleccionados (vacío al entrar)
@@ -712,9 +852,7 @@ window.addEventListener('DOMContentLoaded', () => {
   showLoadingOverlay(true);
   // Cargar datos desde JSONBin antes de renderizar nada
   // Centros con coordenadas (para pines, nombres y direcciones)
-  const centrosReady = fetch('data/centros.json').then(r => r.ok ? r.json() : null).then(list => {
-    if (Array.isArray(list) && list.length) COLMENAS = list;
-  }).catch(() => {});
+  const centrosReady = loadCentros().catch(() => {});
   centrosReady.then(() => loadFromJSONBin()).then(loaded => {
     showLoadingOverlay(false);
     if (loaded) {
@@ -873,8 +1011,8 @@ function syncCentroOptions() {
     all.classList.toggle('partial', nVis > 0 && nVis < _visibleCentros.length);
   }
   const cnt = document.getElementById('centroDropdownCount');
-  if (cnt) cnt.textContent = `${_pendingCentros.size} de ${_allCentros.length}` + (_notOpenYet.length ? ` · ${_notOpenYet.length} aún sin abrir` : '');
-  if (cnt) cnt.title = _notOpenYet.length ? 'Sin abrir todavía: ' + _notOpenYet.map(c => { const i = centroInfo(c); return `${c.toUpperCase()} (${i.fsd.split('-').reverse().join('/')})`; }).join(', ') : '';
+  if (cnt) cnt.textContent = `${_pendingCentros.size} de ${_allCentros.length}` + (_notOpenYet.length ? ` · ${_notOpenYet.length} sin servicio hoy` : '');
+  if (cnt) cnt.title = _notOpenYet.length ? 'Sin servicio hoy: ' + _notOpenYet.map(c => { const d = nextServiceDate(c); return `${c.toUpperCase()} (${d ? 'desde el ' + d.split('-').reverse().join('/') : 'sin fecha'})`; }).join(', ') : '';
 }
 
 function toggleCentroOption(c) {
@@ -1119,7 +1257,9 @@ function updatePageHeader() {
   if (cs.length === 1) {
     const c = cs[0], i = info(c);
     title.textContent = i ? `${c.toUpperCase()} · ${titleCase(i.name)}` : c.toUpperCase();
-    meta.textContent = i ? `${titleCase(i.street)}, ${i.cp} ${i.town}` : 'Sin datos de ubicación para este centro';
+    const model = centroModel(c);
+    meta.innerHTML = (i ? escHtml(`${titleCase(i.street)}, ${i.cp} ${i.town}`) : 'Sin datos de ubicación para este centro')
+      + (model ? `${sep}Modelo <b>${escHtml(model)}</b>` : '');
   } else if (cs.length <= 3) {
     title.textContent = selectionLabel();
     meta.innerHTML = `${cs.length} centros${sep}` + cs.map(c => { const i = info(c); return escHtml(i ? titleCase(i.name) : c.toUpperCase()); }).join(', ');
@@ -1490,12 +1630,34 @@ const ICON_STORE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 44 
 </svg>`;
 // Colmena/panal = está en la lista de colmenas o tiene código tipo mad1/pan2; el resto son tiendas
 function centroInfo(code) { return COLMENAS.find(c => c.code === code); }
-// Un centro cuenta como abierto si no tiene fecha de primer servicio o si ya ha
-// llegado; los que abren en el futuro se ocultan hasta ese día (se evalúa con
-// la fecha del ordenador cada vez que se carga la página o el CSV).
+// Versiones de configuración de cada centro (query de centros): i.v = [[desde, hasta, modelo NTC], …]
+// en fechas ISO, sin huecos. Cada día se usa la versión que lo contiene, así que
+// los centros aparecen y desaparecen solos según la fecha del ordenador.
+function centroVersion(i, day = isoDate(new Date())) {
+  return i && Array.isArray(i.v) ? i.v.find(v => v[0] <= day && day <= v[1]) || null : null;
+}
+// Abierto hoy: tiene versión vigente y, si es tienda, con modelo NTC (sin modelo
+// la tienda no tiene servicio en ese periodo). Colmenas y panales no llevan modelo.
+// Sin versiones (datos antiguos) se usa la fecha de primer servicio.
 function isOpenToday(code) {
   const i = centroInfo(code);
-  return !i || !i.fsd || i.fsd <= isoDate(new Date());
+  if (!i) return true;
+  if (Array.isArray(i.v)) { const v = centroVersion(i); return !!v && (i.type !== 'store' || !!v[2]); }
+  return !i.fsd || i.fsd <= isoDate(new Date());
+}
+// Modelo NTC de hoy (p. ej. NTC60); vacío en colmenas y panales
+function centroModel(code) {
+  const i = centroInfo(code);
+  if (!i) return '';
+  if (Array.isArray(i.v)) { const v = centroVersion(i); return v ? v[2] || '' : ''; }
+  return i.model || '';
+}
+// Fecha en la que un centro cerrado hoy vuelve a tener servicio (ISO) o null
+function nextServiceDate(code) {
+  const i = centroInfo(code), day = isoDate(new Date());
+  if (!i) return null;
+  if (Array.isArray(i.v)) { const v = i.v.find(v => v[0] > day && (i.type !== 'store' || v[2])); return v ? v[0] : null; }
+  return i.fsd && i.fsd > day ? i.fsd : null;
 }
 let _notOpenYet = []; // centros del CSV aún sin abrir (ocultos)
 function isColmena(code) {
@@ -1536,6 +1698,7 @@ function renderColmenas() {
       <div style="font-size:11px;color:${color};font-weight:600;margin-bottom:4px">▶ ${c.code.toUpperCase()} · ${c.type === 'panal' ? 'Panal' : c.type === 'hive' ? 'Colmena' : 'Tienda'}</div>
       <div style="font-size:12px;color:#3b3b38">${c.street}</div>
       <div style="font-size:12px;color:#3b3b38">${c.cp} ${c.town}</div>
+      ${centroModel(c.code) ? `<div style="font-size:12px;color:#3b3b38;margin-top:4px">Modelo <b>${escHtml(centroModel(c.code))}</b></div>` : ''}
       <div style="font-size:11px;color:#6f6f6a;margin-top:4px">${c.lat.toFixed(6)}, ${c.lng.toFixed(6)}</div>`);
     colmenaGroup.addLayer(marker);
   });
@@ -2156,9 +2319,12 @@ function setViewMode(mode) {
 }
 
 // ── CSV LOADER ───────────────────────────────────────────────────────────────
-let _pendingCsvData = null, _pendingCsvFile = '';
+let _pendingCsvData = null, _pendingCsvFile = '', _pendingCsvKind = 'areas'; // 'areas' | 'centros'
 let _previewMode = false;      // true mientras se ve un CSV sin guardar
+let _previewKinds = new Set(); // qué se está previsualizando: 'areas' y/o 'centros'
+let _previewFiles = {};
 let _savedScenarios = null;    // copia de los datos guardados para poder volver
+let _savedCentros = null;      // ídem para los centros
 document.addEventListener('DOMContentLoaded', () => {
   // Modal open/close
   // Contraseña para cargar CSV (se recuerda mientras dure la pestaña)
@@ -2191,7 +2357,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
   function closeModalAndReset() {
     document.getElementById('csvModal').classList.remove('open');
-    _pendingCsvData = null; _pendingCsvFile = '';
+    _pendingCsvData = null; _pendingCsvFile = ''; _pendingCsvKind = 'areas';
     document.getElementById('csvPendingInfo').style.display = 'none';
     document.getElementById('csvActionBtns').style.display = 'none';
   }
@@ -2219,8 +2385,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const reader = new FileReader();
     reader.onload = function(ev) {
       try {
-        const newData = parseCSV(ev.target.result);
-        _pendingCsvData = newData; _pendingCsvFile = file.name;
+        const text = ev.target.result;
+        const confirmBtn = document.getElementById('csvConfirmBtn');
+        if (isCentrosCsv(text)) {
+          // CSV de la query de centros: ubicaciones y versiones (modelo NTC)
+          const parsed = parseCentrosCSV(text, file.name);
+          _pendingCsvData = parsed; _pendingCsvFile = file.name; _pendingCsvKind = 'centros';
+          const hoy = parsed.centros.filter(c => { const v = centroVersion(c); return v && (c.type !== 'store' || v[2]); });
+          const nCol = hoy.filter(c => c.type !== 'store').length;
+          document.getElementById('csvPendingLabel').textContent =
+            `${file.name}  ·  centros  ·  ${parsed.centros.length} en el CSV  ·  ${hoy.length} con servicio hoy (${nCol} colmenas/panales, ${hoy.length - nCol} tiendas)`;
+          confirmBtn.textContent = CENTROS_BIN_URL ? '⚠ Guardar y machacar centros' : '💾 Guardar centros en este navegador';
+          confirmBtn.title = CENTROS_BIN_URL ? 'Sustituye los centros guardados en JSONBin para todos' : 'Se guardan solo en este navegador (no hay bin de centros configurado)';
+          document.getElementById('csvPendingInfo').style.display = 'block';
+          document.getElementById('csvActionBtns').style.display = 'flex';
+          return;
+        }
+        confirmBtn.textContent = '⚠ Guardar y machacar datos';
+        confirmBtn.title = 'Sustituye los datos guardados en JSONBin para todos';
+        const newData = parseCSV(text);
+        _pendingCsvData = newData; _pendingCsvFile = file.name; _pendingCsvKind = 'areas';
         const nCentros = Object.keys(newData).length;
         const nScenarios = Object.values(newData).reduce((s, arr) => s + arr.length, 0);
         const nCps = Object.values(newData).reduce((s, arr) => s + arr.reduce((ss, sc) => ss + Object.keys(sc.cp_areas||{}).length, 0), 0);
@@ -2260,47 +2444,93 @@ document.addEventListener('DOMContentLoaded', () => {
       return false;
     }
   }
-  function setPreviewMode(on, fileName) {
-    _previewMode = on;
+  // Centros: sustituye la lista en memoria y rehace selector, pines y cabecera (no guarda)
+  function applyCentrosLocally(list, meta) {
+    COLMENAS = list; CENTROS_META = meta || null;
+    buildCentroButtons();
+    setCentros(activeCentros.filter(c => isOpenToday(c)));
+  }
+  async function persistCentros(list, meta) {
+    showToast('⟳ Guardando centros…');
+    try {
+      const where = await saveCentros(list, meta);
+      showToast(where === 'bin' ? `✓ Centros guardados: ${list.length}` : `✓ Centros guardados en este navegador: ${list.length}`);
+      return true;
+    } catch (e) {
+      showToast(`⚠ Centros cargados solo en esta pestaña (error al guardar: ${e.message})`);
+      console.error('Centros save error:', e);
+      return false;
+    }
+  }
+  function setPreviewKind(kind, on, fileName) {
+    if (on) { _previewKinds.add(kind); _previewFiles[kind] = fileName; }
+    else { _previewKinds.delete(kind); delete _previewFiles[kind]; }
+    _previewMode = _previewKinds.size > 0;
     const b = document.getElementById('previewBanner');
-    b.classList.toggle('shown', on);
-    if (on) document.getElementById('previewBannerFile').textContent = `${fileName} · ${Object.keys(ALL_SCENARIOS).length} centros`;
+    b.classList.toggle('shown', _previewMode);
+    const parts = [];
+    if (_previewKinds.has('areas')) parts.push(`${_previewFiles.areas} · ${Object.keys(ALL_SCENARIOS).length} centros`);
+    if (_previewKinds.has('centros')) parts.push(`${_previewFiles.centros} · ${COLMENAS.length} centros con ubicación y modelo`);
+    document.getElementById('previewBannerFile').textContent = parts.join(' + ');
   }
 
   // 👁 Ver sin guardar: carga el CSV solo en este navegador para revisarlo
   window.previewCsv = function() {
     if (!_pendingCsvData) return;
-    const newData = _pendingCsvData, fileName = _pendingCsvFile;
+    const newData = _pendingCsvData, fileName = _pendingCsvFile, kind = _pendingCsvKind;
     closeModalAndReset();
-    if (!_previewMode) _savedScenarios = JSON.parse(JSON.stringify(ALL_SCENARIOS)); // copia de lo guardado
+    if (kind === 'centros') {
+      if (!_previewKinds.has('centros')) _savedCentros = { list: COLMENAS, meta: CENTROS_META }; // lo guardado
+      applyCentrosLocally(newData.centros, newData.meta);
+      setPreviewKind('centros', true, fileName);
+      showToast(`👁 Centros cargados sin guardar: ${newData.centros.length}`);
+      return;
+    }
+    if (!_previewKinds.has('areas')) _savedScenarios = JSON.parse(JSON.stringify(ALL_SCENARIOS)); // copia de lo guardado
     applyDataLocally(newData);
-    setPreviewMode(true, fileName);
+    setPreviewKind('areas', true, fileName);
     showToast(`👁 CSV cargado sin guardar: ${Object.keys(newData).length} centros`);
   };
   // Guardar (machacar) desde el modal
   window.confirmApplyCsv = async function() {
     if (!_pendingCsvData) return;
-    const newData = _pendingCsvData;
+    const newData = _pendingCsvData, kind = _pendingCsvKind;
     closeModalAndReset();
+    if (kind === 'centros') {
+      applyCentrosLocally(newData.centros, newData.meta);
+      setPreviewKind('centros', false);
+      _savedCentros = null;
+      await persistCentros(newData.centros, newData.meta);
+      return;
+    }
     applyDataLocally(newData);
-    setPreviewMode(false);
+    setPreviewKind('areas', false);
     _savedScenarios = null;
     await saveData(newData);
   };
   // Guardar lo que se está previsualizando
   window.savePreview = async function() {
     if (!_previewMode) return;
-    setPreviewMode(false);
-    _savedScenarios = null;
-    await saveData(JSON.parse(JSON.stringify(ALL_SCENARIOS)));
+    const kinds = new Set(_previewKinds);
+    setPreviewKind('areas', false); setPreviewKind('centros', false);
+    if (kinds.has('centros')) { _savedCentros = null; await persistCentros(COLMENAS, CENTROS_META); }
+    if (kinds.has('areas')) { _savedScenarios = null; await saveData(JSON.parse(JSON.stringify(ALL_SCENARIOS))); }
   };
   // Descartar la previsualización y volver a los datos guardados
   window.discardPreview = function() {
     if (!_previewMode) return;
-    const saved = _savedScenarios || {};
-    _savedScenarios = null;
-    applyDataLocally(saved);
-    setPreviewMode(false);
+    if (_previewKinds.has('centros') && _savedCentros) {
+      const sc = _savedCentros; _savedCentros = null;
+      setPreviewKind('centros', false);
+      applyCentrosLocally(sc.list, sc.meta);
+    }
+    if (_previewKinds.has('areas')) {
+      const saved = _savedScenarios || {};
+      _savedScenarios = null;
+      setPreviewKind('areas', false);
+      applyDataLocally(saved);
+    }
+    setPreviewKind('areas', false); setPreviewKind('centros', false);
     showToast('↩ Datos guardados restaurados');
   };
 });
