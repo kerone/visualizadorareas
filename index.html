@@ -287,7 +287,7 @@ button{font-family:inherit}
 /* Modal CSV, aviso y carga */
 .csv-modal-overlay{display:none;position:fixed;inset:0;background:rgba(20,20,18,.45);z-index:10000;align-items:center;justify-content:center}
 .csv-modal-overlay.open{display:flex}
-.csv-modal-box{background:var(--card);border-radius:16px;width:480px;max-width:calc(100vw - 32px);overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.25)}
+.csv-modal-box{background:var(--card);border-radius:16px;width:640px;max-width:calc(100vw - 32px);overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.25)}
 .csv-modal-lock{padding:32px 32px 22px;text-align:center;border-bottom:1px solid var(--border)}
 .csv-lock-form{display:flex;gap:8px;justify-content:center;margin-top:4px}
 .csv-lock-input{height:36px;width:200px;border:1px solid var(--line);border-radius:8px;padding:0 12px;font:inherit;font-size:14px;outline:none}
@@ -295,6 +295,14 @@ button{font-family:inherit}
 .csv-lock-error{min-height:18px;margin-top:8px;font-size:12px;color:#b42318;font-weight:600}
 .csv-modal-dropzone{padding:36px 32px 26px;text-align:center;cursor:pointer;border-bottom:1px solid var(--border);transition:background .15s}
 .csv-modal-dropzone:hover,.csv-modal-dropzone.drag-over{background:var(--accent-soft)}
+.csv-drop-grid{display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--border)}
+.csv-drop-col{display:flex;flex-direction:column;align-items:center;gap:10px;padding:0 0 16px}
+.csv-drop-col+.csv-drop-col{border-left:1px solid var(--border)}
+.csv-drop-col .csv-modal-dropzone{align-self:stretch;border-bottom:none;padding:28px 20px 18px}
+.csv-drop-col .csv-modal-title{margin-bottom:4px}
+.csv-drop-links{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;padding:0 12px}
+.csv-drop-links .metabase-btn{height:32px;padding:0 12px;font-size:12px}
+@media (max-width:560px){.csv-drop-grid{grid-template-columns:1fr}.csv-drop-col+.csv-drop-col{border-left:none;border-top:1px solid var(--border)}}
 .csv-modal-icon{font-size:40px;margin-bottom:12px}
 .csv-modal-title{font-size:16px;font-weight:700;margin-bottom:10px}
 .csv-modal-hint{font-size:13px;color:var(--muted)}
@@ -357,12 +365,31 @@ button{font-family:inherit}
       </form>
       <div class="csv-lock-error" id="csvLockError"></div>
     </div>
-    <div class="csv-modal-dropzone" id="csvDropzone" style="display:none">
-      <div class="csv-modal-icon">🗂️</div>
-      <div class="csv-modal-title">Arrastra el CSV de áreas o de centros aquí o haz clic para seleccionar</div>
-      <input type="file" id="csvInput" accept=".csv" style="display:none">
+    <div class="csv-drop-grid" id="csvDropGrid" style="display:none">
+      <div class="csv-drop-col">
+        <div class="csv-modal-dropzone" id="csvDropzone" title="Arrastra aquí el CSV de áreas o haz clic para elegirlo">
+          <div class="csv-modal-icon">🗂️</div>
+          <div class="csv-modal-title">Áreas</div>
+          <div class="csv-modal-hint">Arrastra el CSV o haz clic</div>
+          <input type="file" id="csvInput" accept=".csv" style="display:none">
+        </div>
+        <div class="csv-drop-links">
+          <a class="metabase-btn" href="https://metabase.prod.monline/question/34614-areas-centros-26" target="_blank" title="Query de las áreas de cada centro"><span>📊</span> Query áreas</a>
+        </div>
+      </div>
+      <div class="csv-drop-col">
+        <div class="csv-modal-dropzone" id="csvDropzoneCentros" title="Arrastra aquí el CSV de CPs por centro (vista Centro) o el de datos de centros">
+          <div class="csv-modal-icon">🏪</div>
+          <div class="csv-modal-title">Centros</div>
+          <div class="csv-modal-hint">Arrastra el CSV o haz clic</div>
+          <input type="file" id="csvInputCentros" accept=".csv" style="display:none">
+        </div>
+        <div class="csv-drop-links">
+          <a class="metabase-btn" href="https://metabase.prod.monline/question#eyJkYXRhc2V0X3F1ZXJ5Ijp7ImRhdGFiYXNlIjo3OCwidHlwZSI6InF1ZXJ5IiwicXVlcnkiOnsic291cmNlLXRhYmxlIjo4MzE1NSwiam9pbnMiOlt7ImZpZWxkcyI6ImFsbCIsImFsaWFzIjoiRmFjdCBQbGFuaWZpY2FjaW9uIENlbnRyb3MgQ2VudGVycyAtIENlbnRlciBDb2RlIiwiY29uZGl0aW9uIjpbIj0iLFsiZmllbGQiLDExNDMwNTMseyJiYXNlLXR5cGUiOiJ0eXBlL1RleHQifV0sWyJmaWVsZCIsMTEzNzUzNCx7ImJhc2UtdHlwZSI6InR5cGUvVGV4dCIsImpvaW4tYWxpYXMiOiJGYWN0IFBsYW5pZmljYWNpb24gQ2VudHJvcyBDZW50ZXJzIC0gQ2VudGVyIENvZGUifV1dLCJzb3VyY2UtdGFibGUiOjgyNjg3fV19fSwiZGlzcGxheSI6InRhYmxlIiwidmlzdWFsaXphdGlvbl9zZXR0aW5ncyI6e319" target="_blank" title="Query de los datos de centros: ubicación y modelo NTC"><span>📊</span> Query datos centros</a>
+        </div>
+      </div>
     </div>
-    <div class="csv-modal-footer" style="gap:10px;flex-wrap:wrap;justify-content:center">
+    <div class="csv-modal-footer" id="csvFooter" style="gap:10px;flex-wrap:wrap;justify-content:center;display:none">
       <div id="csvPendingInfo" style="display:none;width:100%;text-align:center;margin-bottom:6px">
         <span id="csvPendingLabel" class="card-sub" style="font-weight:600;color:var(--text)"></span>
       </div>
@@ -370,12 +397,6 @@ button{font-family:inherit}
         <button id="csvPreviewBtn" onclick="previewCsv()" class="btn-ghost" title="Cargar el CSV solo en este navegador para revisarlo; no se guarda nada">👁 Ver sin guardar</button>
         <button id="csvConfirmBtn" onclick="confirmApplyCsv()" class="btn-primary btn-danger-solid" title="Sustituye los datos guardados en JSONBin para todos">⚠ Guardar y machacar datos</button>
       </div>
-      <a class="metabase-btn" href="https://metabase.prod.monline/question/34614-areas-centros-26" target="_blank" title="Query de las áreas de cada centro">
-        <span>📊</span> Query áreas
-      </a>
-      <a class="metabase-btn" href="https://metabase.prod.monline/question#eyJkYXRhc2V0X3F1ZXJ5Ijp7ImRhdGFiYXNlIjo3OCwidHlwZSI6InF1ZXJ5IiwicXVlcnkiOnsic291cmNlLXRhYmxlIjo4MzE1NSwiam9pbnMiOlt7ImZpZWxkcyI6ImFsbCIsImFsaWFzIjoiRmFjdCBQbGFuaWZpY2FjaW9uIENlbnRyb3MgQ2VudGVycyAtIENlbnRlciBDb2RlIiwiY29uZGl0aW9uIjpbIj0iLFsiZmllbGQiLDExNDMwNTMseyJiYXNlLXR5cGUiOiJ0eXBlL1RleHQifV0sWyJmaWVsZCIsMTEzNzUzNCx7ImJhc2UtdHlwZSI6InR5cGUvVGV4dCIsImpvaW4tYWxpYXMiOiJGYWN0IFBsYW5pZmljYWNpb24gQ2VudHJvcyBDZW50ZXJzIC0gQ2VudGVyIENvZGUifV1dLCJzb3VyY2UtdGFibGUiOjgyNjg3fV19fSwiZGlzcGxheSI6InRhYmxlIiwidmlzdWFsaXphdGlvbl9zZXR0aW5ncyI6e319" target="_blank" title="Query de los centros: ubicación y versiones de configuración (modelo NTC)">
-        <span>📊</span> Query centros
-      </a>
     </div>
   </div>
 </div>
@@ -707,29 +728,41 @@ function centrosPayloadOk(rec) {
   const list = Array.isArray(rec) ? rec : rec && rec.centros;
   return Array.isArray(list) && list.length ? { centros: list, meta: (rec && rec.meta) || null } : null;
 }
+function cpsPayloadOk(rec) {
+  const cps = rec && rec.cps;
+  return cps && typeof cps === 'object' && Object.keys(cps).length ? { cps, meta: rec.cpsMeta || rec.meta || null } : null;
+}
+// Entre la copia de este navegador y el fichero del repositorio gana el export más reciente
+async function newestOf(lsKey, url, ok) {
+  let local = null, file = null;
+  if (!CENTROS_BIN_URL) { try { local = ok(JSON.parse(localStorage.getItem(lsKey) || 'null')); } catch (_) {} }
+  try { const r = await fetch(url); if (r.ok) file = ok(await r.json()); } catch (_) {}
+  const date = x => (x && x.meta && x.meta.date) || '';
+  return local && (!file || date(local) > date(file)) ? local : file;
+}
 async function loadCentros() {
+  let rec = null;
   if (CENTROS_BIN_URL) {
     try {
       const res = await fetch(CENTROS_BIN_URL + '/latest', { headers: { 'X-Master-Key': JSONBIN_API_KEY } });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const got = centrosPayloadOk((await res.json()).record);
-      if (got) { COLMENAS = got.centros; CENTROS_META = got.meta; return 'bin'; }
+      rec = (await res.json()).record;
     } catch (e) { console.warn('JSONBin centros:', e); }
   }
-  let local = null, file = null;
-  if (!CENTROS_BIN_URL) { try { local = centrosPayloadOk(JSON.parse(localStorage.getItem(CENTROS_LS_KEY) || 'null')); } catch (_) {} }
-  try { const r = await fetch('data/centros.json'); if (r.ok) file = centrosPayloadOk(await r.json()); } catch (_) {}
-  const date = x => (x && x.meta && x.meta.date) || '';
-  const pick = local && (!file || date(local) > date(file)) ? local : file;
-  if (pick) { COLMENAS = pick.centros; CENTROS_META = pick.meta; return pick === local ? 'local' : 'file'; }
-  return null; // se queda la lista embebida de colmenas
+  const info = centrosPayloadOk(rec) || await newestOf(CENTROS_LS_KEY, 'data/centros.json', centrosPayloadOk);
+  if (info) { COLMENAS = info.centros; CENTROS_META = info.meta; } // si no, la lista embebida de colmenas
+  const cps = cpsPayloadOk(rec) || await newestOf(CPC_LS_KEY, 'data/cp_centros.json', cpsPayloadOk);
+  setCpCentros(cps ? cps.cps : null, cps ? cps.meta : null);
 }
-async function saveCentros(list, meta) {
-  const body = { meta, centros: list };
-  if (!CENTROS_BIN_URL) {
-    localStorage.setItem(CENTROS_LS_KEY, JSON.stringify(body));
-    return 'local';
-  }
+// Todo lo de centros va al mismo bin; lo que se está viendo sin guardar no se sube
+async function putCentrosBin(over) {
+  const body = {
+    meta: _previewKinds.has('centros') && _savedCentros ? _savedCentros.meta : CENTROS_META,
+    centros: _previewKinds.has('centros') && _savedCentros ? _savedCentros.list : COLMENAS,
+    cpsMeta: _previewKinds.has('cps') && _savedCps ? _savedCps.meta : CP_CENTROS_META,
+    cps: _previewKinds.has('cps') && _savedCps ? _savedCps.data : CP_CENTROS,
+    ...over
+  };
   const res = await fetch(CENTROS_BIN_URL, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', 'X-Master-Key': JSONBIN_API_KEY },
@@ -737,6 +770,88 @@ async function saveCentros(list, meta) {
   });
   if (!res.ok) throw new Error(`JSONBin PUT failed: HTTP ${res.status}`);
   return 'bin';
+}
+async function saveCentros(list, meta) {
+  if (CENTROS_BIN_URL) return putCentrosBin({ meta, centros: list });
+  localStorage.setItem(CENTROS_LS_KEY, JSON.stringify({ meta, centros: list }));
+  return 'local';
+}
+async function saveCpCentros(cps, meta) {
+  if (CENTROS_BIN_URL) return putCentrosBin({ cpsMeta: meta, cps });
+  localStorage.setItem(CPC_LS_KEY, JSON.stringify({ meta, cps }));
+  return 'local';
+}
+
+// ── CPs DE CADA CENTRO POR FECHA (vista Centro) ─────────────────────────────
+// Query de CPs por centro: qué CP sirve cada centro y entre qué fechas. Solo
+// servicio online (sin NSD) y desde abril de 2026. Se guarda compacto:
+// {centro: [[cp, desde, hasta], …]} en días contados desde CP_START (hasta -1 = sin fin).
+const CP_START = '2026-04-01';
+const CPC_LS_KEY = 'cpCentrosV1';
+let CP_CENTROS = null, CP_CENTROS_META = null;
+let CPC_SCENARIOS = {}; // escenarios de la vista Centro, con la misma forma que los de áreas
+const cpEpoch = () => Date.UTC(2026, 3, 1);
+function cpDay(iso) { const [y, m, d] = iso.split('-').map(Number); return Math.round((Date.UTC(y, m - 1, d) - cpEpoch()) / 864e5); }
+function cpIso(n) { return new Date(cpEpoch() + n * 864e5).toISOString().slice(0, 10); }
+function setCpCentros(data, meta) {
+  CP_CENTROS = data || null; CP_CENTROS_META = meta || null;
+  CPC_SCENARIOS = buildCpcScenarios(CP_CENTROS);
+}
+function buildCpcScenarios(data) {
+  const out = {};
+  if (!data) return out;
+  const f = iso => iso.split('-').reverse().join('/');
+  const labelOf = (fr, to) => to ? `${f(fr)} – ${f(to)}` : `desde ${f(fr)}`;
+  Object.entries(data).forEach(([c, rows]) => {
+    const B = new Set([0]);
+    rows.forEach(([, d0, d1]) => { if (d0 > 0) B.add(d0); if (d1 >= 0) B.add(d1 + 1); });
+    const days = [...B].sort((a, b) => a - b);
+    const per = [];
+    days.forEach((d, i) => {
+      const cps = [...new Set(rows.filter(r => r[1] <= d && (r[2] < 0 || d <= r[2])).map(r => r[0]))].sort();
+      const key = cps.join(','), to = i < days.length - 1 ? days[i + 1] - 1 : null;
+      const prev = per[per.length - 1];
+      if (prev && prev.key === key) { prev.to = to; return; }
+      per.push({ key, from: d, to, cps });
+    });
+    while (per.length > 1 && !per[0].cps.length) per.shift(); // aún sin servicio online
+    out[c] = per.map((p, i) => {
+      const from = cpIso(p.from), to = p.to === null ? null : cpIso(p.to);
+      const cp_areas = {}; p.cps.forEach(cp => { cp_areas[cp] = c; });
+      return { id: `E${i + 1}`, from, to, label: labelOf(from, to), cp_areas, areas: p.cps.length ? [c] : [] };
+    });
+  });
+  return out;
+}
+function isCpCentrosCsv(text) {
+  const h = (csvRows(text.slice(0, 3000))[0] || []).map(x => x.trim().toLowerCase());
+  return h.includes('postal code') && h.includes('start date') && h.includes('end date') && h.includes('center code') && !h.some(x => x.includes('center type'));
+}
+function parseCpCentrosCSV(text, fileName = '') {
+  const rows = csvRows(text);
+  const h = (rows[0] || []).map(x => x.trim().toLowerCase());
+  const C = { cp: h.indexOf('postal code'), start: h.indexOf('start date'), end: h.indexOf('end date'), code: h.indexOf('center code'), type: h.indexOf('service type') };
+  const missing = Object.entries(C).filter(([k, i]) => i < 0 && k !== 'type').map(([k]) => k);
+  if (missing.length) throw new Error('Faltan columnas en el CSV de CPs por centro: ' + missing.join(', '));
+  const cps = {}, seen = new Set();
+  let nsd = 0, old = 0, n = 0;
+  rows.slice(1).forEach(r => {
+    const code = (r[C.code] || '').trim();
+    const cp = String(parseInt(r[C.cp], 10)).padStart(5, '0');
+    const start = csvIsoDate(r[C.start]), end = csvIsoDate(r[C.end]) || '2999-01-01';
+    if (!code || !start || !/^\d{5}$/.test(cp)) return;
+    if (C.type >= 0 && (r[C.type] || '').trim().toLowerCase() === 'nsd') { nsd++; return; }
+    if (end < CP_START) { old++; return; }
+    const d0 = Math.max(0, cpDay(start)), d1 = end >= '2999' ? -1 : cpDay(end);
+    const k = `${code}|${cp}|${d0}|${d1}`;
+    if (seen.has(k)) return; // CP partido (Mercacp 30380.1, .2…) en el mismo centro
+    seen.add(k); n++;
+    (cps[code] = cps[code] || []).push([cp, d0, d1]);
+  });
+  if (!n) throw new Error('El CSV de CPs por centro no tiene filas online desde abril de 2026');
+  const m = fileName.match(/(\d{4}-\d{2}-\d{2})T(\d{2})_(\d{2})_(\d{2})/);
+  const date = m ? `${m[1]}T${m[2]}:${m[3]}:${m[4]}` : new Date().toISOString().slice(0, 19);
+  return { cps, meta: { file: fileName, date, n: Object.keys(cps).length, rows: n, nsd, old, start: CP_START } };
 }
 
 // CSV con comillas (las coordenadas llevan coma decimal: "38,33850900° N")
@@ -1050,9 +1165,29 @@ const selectionLabel = () => activeCentros.map(c => c.toUpperCase()).join(' + ')
 const selectionColor = () => isMulti() ? '#009a4e' : CENTRO_COLORS[activeCentro];
 const colorKey = () => activeCentros.join('+');
 
+// Escenarios de un centro según la vista: Áreas usa la query de áreas y Centro
+// la de CPs por centro (si no está cargada, también la de áreas)
+const CPC_EMPTY = [{ id: 'E1', from: CP_START, to: null, label: 'desde 01/04/2026', cp_areas: {}, areas: [] }];
+function scenariosOf(c) {
+  if (activeTab === 'mapa' && CP_CENTROS) return CPC_SCENARIOS[c] || CPC_EMPTY;
+  return ALL_SCENARIOS[c] || [];
+}
 // Escenarios de la selección actual (reales si hay 1 centro, combinados si hay varios)
 function getActiveScenarios() {
-  return isMulti() ? _multiScenarios : (ALL_SCENARIOS[activeCentro] || []);
+  return isMulti() ? _multiScenarios : scenariosOf(activeCentro);
+}
+// Fecha que representa el escenario elegido (hoy si lo contiene) y escenario de
+// la selección que contiene una fecha: al cambiar de vista se mantiene la fecha
+function activeRefDate() {
+  const sc = getActiveScenario(), today = isoDate(new Date());
+  if (!sc || scCoversIso(sc, today)) return today;
+  return sc.from || sc.to || today;
+}
+function scenarioIdxAt(iso) {
+  const scs = getActiveScenarios();
+  const i = scs.findIndex(sc => scCoversIso(sc, iso));
+  if (i >= 0) return i;
+  return scs.length && scs[0].from && iso < scs[0].from ? 0 : Math.max(0, scs.length - 1);
 }
 function getActiveScenario() {
   return getActiveScenarios()[activeScIdx];
@@ -1070,19 +1205,21 @@ function scCoversIso(sc, iso) {
 // cualquiera de ellos cambia empieza un periodo nuevo.
 function buildMultiScenarios(centros) {
   const bounds = new Set();
-  centros.forEach(c => (ALL_SCENARIOS[c] || []).forEach(sc => { if (sc.from) bounds.add(sc.from); }));
+  centros.forEach(c => scenariosOf(c).forEach(sc => { if (sc.from) bounds.add(sc.from); }));
   const sorted = [...bounds].sort();
 
   // Áreas con el mismo nombre en varios centros → se desambiguan con el centro
   const areaOwners = {};
-  centros.forEach(c => (ALL_SCENARIOS[c] || []).forEach(sc =>
+  centros.forEach(c => scenariosOf(c).forEach(sc =>
     (sc.areas || []).forEach(a => { (areaOwners[a] = areaOwners[a] || new Set()).add(c); })));
   const areaKey = (c, a) => areaOwners[a]?.size > 1 ? `${a} · ${c.toUpperCase()}` : a;
 
   const periods = [];
+  // Si todos los centros empiezan con fecha (vista Centro: 01/04/2026) no hay periodo «hasta…»
+  const openStart = centros.some(c => { const f = scenariosOf(c)[0]; return f && !f.from; });
   if (!sorted.length) periods.push({from:null, to:null, ref:null});
   else {
-    periods.push({from:null, to:isoAddDays(sorted[0], -1), ref:isoAddDays(sorted[0], -1)});
+    if (openStart) periods.push({from:null, to:isoAddDays(sorted[0], -1), ref:isoAddDays(sorted[0], -1)});
     sorted.forEach((b, i) => {
       const to = i < sorted.length - 1 ? isoAddDays(sorted[i+1], -1) : null;
       periods.push({from:b, to, ref:b});
@@ -1101,7 +1238,7 @@ function buildMultiScenarios(centros) {
   periods.forEach(p => {
     const parts = {};
     centros.forEach(c => {
-      const scs = ALL_SCENARIOS[c] || [];
+      const scs = scenariosOf(c);
       const idx = p.ref ? scs.findIndex(sc => scCoversIso(sc, p.ref)) : scs.length - 1;
       if (idx >= 0) parts[c] = idx;
     });
@@ -1114,7 +1251,7 @@ function buildMultiScenarios(centros) {
     const cp_areas = {}, cp_centro = {}, area_centro = {}, areaKeyOf = {}, areas = [];
     centros.forEach(c => {
       if (parts[c] === undefined) return;
-      const sc = ALL_SCENARIOS[c][parts[c]];
+      const sc = scenariosOf(c)[parts[c]];
       areaKeyOf[c] = {};
       [...(sc.areas || [])].sort().forEach(a => {
         const k = areaKey(c, a);
@@ -1367,7 +1504,8 @@ function renderSidebar() {
       if (active) {
         if (added.length) detailHtml += `<div class="sc-detail">Gana</div><div class="sc-cp-diff">${added.map(cp => `<span class="cp-tag new">+${cp}</span>`).join('')}</div>`;
         if (removed.length) detailHtml += `<div class="sc-detail">Pierde</div><div class="sc-cp-diff">${removed.map(cp => `<span class="cp-tag removed">${cp}</span>`).join('')}</div>`;
-        if (changed.length) detailHtml += `<div class="sc-detail">Reasignados</div><div class="sc-cp-diff">${changed.map(cp => `<span class="cp-tag moved">${cp}: ${prev[cp]} → ${curr[cp]}</span>`).join('')}</div>`;
+        const nm = a => activeTab === 'mapa' && CP_CENTROS ? String(a).toUpperCase() : a;
+        if (changed.length) detailHtml += `<div class="sc-detail">${activeTab === 'mapa' && CP_CENTROS ? 'Cambian de centro' : 'Reasignados'}</div><div class="sc-cp-diff">${changed.map(cp => `<span class="cp-tag moved">${cp}: ${nm(prev[cp])} → ${nm(curr[cp])}</span>`).join('')}</div>`;
       }
     }
 
@@ -1381,7 +1519,7 @@ function renderSidebar() {
         ${isCurrent ? '<span class="tl-today">Hoy</span>' : ''}
         <div class="tl-label">${title}</div>
         <div class="tl-sub">${dates}</div>
-        ${active ? `<div class="tl-meta"><strong>${Object.keys(sc.cp_areas).length}</strong> CPs · <strong>${sc.areas.length}</strong> áreas</div>` : ''}
+        ${active ? `<div class="tl-meta"><strong>${Object.keys(sc.cp_areas).length}</strong> CPs` + (activeTab === 'mapa' && CP_CENTROS ? (isMulti() ? ` · <strong>${sc.areas.length}</strong> centros` : '') : ` · <strong>${sc.areas.length}</strong> áreas`) + `</div>` : ''}
         ${badgeHtml}
         ${detailHtml}
       </div>`;
@@ -2306,7 +2444,15 @@ document.addEventListener('DOMContentLoaded', initLegendDrag);
 
 // ── VIEW MODE TOGGLE ─────────────────────────────────────────────────────────
 function setViewMode(mode) {
+  const refDate = activeCentros.length ? activeRefDate() : null;
+  const prevTab = activeTab;
   activeTab = mode === 'areas' ? 'mapareas' : 'mapa';
+  if (refDate && prevTab !== activeTab) {
+    _multiScenarios = isMulti() ? buildMultiScenarios(activeCentros) : [];
+    activeScIdx = scenarioIdxAt(refDate);
+    buildScenarioChips();
+    renderSidebar();
+  }
   document.body.classList.toggle('view-areas', mode === 'areas');
   document.body.classList.toggle('view-centros', mode === 'centros');
   // Toggle left nav items
@@ -2332,12 +2478,13 @@ function setViewMode(mode) {
 }
 
 // ── CSV LOADER ───────────────────────────────────────────────────────────────
-let _pendingCsvData = null, _pendingCsvFile = '', _pendingCsvKind = 'areas'; // 'areas' | 'centros'
+let _pendingCsvData = null, _pendingCsvFile = '', _pendingCsvKind = 'areas'; // 'areas' | 'centros' (datos) | 'cps' (CPs por centro)
 let _previewMode = false;      // true mientras se ve un CSV sin guardar
 let _previewKinds = new Set(); // qué se está previsualizando: 'areas' y/o 'centros'
 let _previewFiles = {};
 let _savedScenarios = null;    // copia de los datos guardados para poder volver
-let _savedCentros = null;      // ídem para los centros
+let _savedCentros = null;      // ídem para los datos de centros
+let _savedCps = null;          // ídem para los CPs por centro
 document.addEventListener('DOMContentLoaded', () => {
   // Modal open/close
   // Contraseña para cargar CSV (se recuerda mientras dure la pestaña)
@@ -2346,7 +2493,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function showCsvStep() {
     const ok = csvUnlocked();
     document.getElementById('csvLock').style.display = ok ? 'none' : '';
-    document.getElementById('csvDropzone').style.display = ok ? '' : 'none';
+    document.getElementById('csvDropGrid').style.display = ok ? '' : 'none';
     if (!ok) setTimeout(() => document.getElementById('csvPassword').focus(), 50);
   }
   window.checkCsvPassword = function() {
@@ -2373,34 +2520,53 @@ document.addEventListener('DOMContentLoaded', () => {
     _pendingCsvData = null; _pendingCsvFile = ''; _pendingCsvKind = 'areas';
     document.getElementById('csvPendingInfo').style.display = 'none';
     document.getElementById('csvActionBtns').style.display = 'none';
+    document.getElementById('csvFooter').style.display = 'none';
   }
 
-  // Dropzone drag & drop
-  const dropzone = document.getElementById('csvDropzone');
-  dropzone.addEventListener('click', () => document.getElementById('csvInput').click());
-  dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('drag-over'); });
-  dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag-over'));
-  dropzone.addEventListener('drop', (e) => {
-    e.preventDefault();
-    dropzone.classList.remove('drag-over');
-    const file = e.dataTransfer.files[0];
-    if (file) processCSVFile(file);
+  // Dos cajas: Áreas y Centros (cada una con su CSV), arrastrando o con clic
+  [['csvDropzone', 'csvInput', 'areas'], ['csvDropzoneCentros', 'csvInputCentros', 'centros']].forEach(([dzId, inId, box]) => {
+    const dropzone = document.getElementById(dzId), input = document.getElementById(inId);
+    dropzone.addEventListener('click', () => input.click());
+    dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('drag-over'); });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag-over'));
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropzone.classList.remove('drag-over');
+      const file = e.dataTransfer.files[0];
+      if (file) processCSVFile(file, box);
+    });
+    input.addEventListener('change', function() {
+      const file = this.files[0];
+      if (file) processCSVFile(file, box);
+      this.value = '';
+    });
   });
 
-  document.getElementById('csvInput').addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (file) processCSVFile(file);
-    this.value = '';
-  });
 
-
-  function processCSVFile(file) {
+  function processCSVFile(file, box = 'areas') {
     const reader = new FileReader();
     reader.onload = function(ev) {
       try {
         const text = ev.target.result;
         const confirmBtn = document.getElementById('csvConfirmBtn');
-        if (isCentrosCsv(text)) {
+        const kind = isCpCentrosCsv(text) ? 'cps' : isCentrosCsv(text) ? 'centros' : 'areas';
+        if (box === 'areas' && kind !== 'areas') { showToast('✗ Este CSV es de centros: suéltalo en la caja «Centros»'); return; }
+        if (box === 'centros' && kind === 'areas') { showToast('✗ Este CSV no es de centros: si es el de áreas, suéltalo en la caja «Áreas»'); return; }
+        if (kind === 'cps') {
+          // CPs de cada centro por fecha (vista Centro): online y desde abril de 2026
+          const parsed = parseCpCentrosCSV(text, file.name);
+          _pendingCsvData = parsed; _pendingCsvFile = file.name; _pendingCsvKind = 'cps';
+          const nSc = Object.values(buildCpcScenarios(parsed.cps)).reduce((a, x) => a + x.length, 0);
+          document.getElementById('csvPendingLabel').textContent =
+            `${file.name}  ·  CPs por centro  ·  ${parsed.meta.n} centros  ·  ${nSc} escenarios desde 01/04/2026  ·  ${parsed.meta.nsd} filas NSD descartadas`;
+          confirmBtn.textContent = CENTROS_BIN_URL ? '⚠ Guardar y machacar CPs por centro' : '💾 Guardar en este navegador';
+          confirmBtn.title = CENTROS_BIN_URL ? 'Sustituye los CPs por centro guardados en JSONBin para todos' : 'Se guardan solo en este navegador (no hay bin de centros configurado)';
+          document.getElementById('csvPendingInfo').style.display = 'block';
+          document.getElementById('csvActionBtns').style.display = 'flex';
+          document.getElementById('csvFooter').style.display = 'flex';
+          return;
+        }
+        if (kind === 'centros') {
           // CSV de la query de centros: ubicaciones y versiones (modelo NTC)
           const parsed = parseCentrosCSV(text, file.name);
           _pendingCsvData = parsed; _pendingCsvFile = file.name; _pendingCsvKind = 'centros';
@@ -2412,6 +2578,7 @@ document.addEventListener('DOMContentLoaded', () => {
           confirmBtn.title = CENTROS_BIN_URL ? 'Sustituye los centros guardados en JSONBin para todos' : 'Se guardan solo en este navegador (no hay bin de centros configurado)';
           document.getElementById('csvPendingInfo').style.display = 'block';
           document.getElementById('csvActionBtns').style.display = 'flex';
+          document.getElementById('csvFooter').style.display = 'flex';
           return;
         }
         confirmBtn.textContent = '⚠ Guardar y machacar datos';
@@ -2425,6 +2592,7 @@ document.addEventListener('DOMContentLoaded', () => {
           `${file.name}  ·  ${nCentros} centros  ·  ${nScenarios} escenarios  ·  ${nCps} CPs`;
         document.getElementById('csvPendingInfo').style.display = 'block';
         document.getElementById('csvActionBtns').style.display = 'flex';
+        document.getElementById('csvFooter').style.display = 'flex';
       } catch(err) {
         showToast('✗ Error: ' + err.message);
         console.error(err);
@@ -2475,6 +2643,23 @@ document.addEventListener('DOMContentLoaded', () => {
       return false;
     }
   }
+  // CPs por centro: sustituye los escenarios de la vista Centro (no guarda)
+  function applyCpsLocally(cps, meta) {
+    setCpCentros(cps, meta);
+    if (activeCentros.length) setCentros(activeCentros);
+  }
+  async function persistCps(cps, meta) {
+    showToast('⟳ Guardando CPs por centro…');
+    try {
+      const where = await saveCpCentros(cps, meta);
+      showToast(where === 'bin' ? `✓ CPs por centro guardados: ${Object.keys(cps).length} centros` : `✓ CPs por centro guardados en este navegador: ${Object.keys(cps).length} centros`);
+      return true;
+    } catch (e) {
+      showToast(`⚠ CPs por centro cargados solo en esta pestaña (error al guardar: ${e.message})`);
+      console.error('CPs save error:', e);
+      return false;
+    }
+  }
   function setPreviewKind(kind, on, fileName) {
     if (on) { _previewKinds.add(kind); _previewFiles[kind] = fileName; }
     else { _previewKinds.delete(kind); delete _previewFiles[kind]; }
@@ -2484,6 +2669,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const parts = [];
     if (_previewKinds.has('areas')) parts.push(`${_previewFiles.areas} · ${Object.keys(ALL_SCENARIOS).length} centros`);
     if (_previewKinds.has('centros')) parts.push(`${_previewFiles.centros} · ${COLMENAS.length} centros con ubicación y modelo`);
+    if (_previewKinds.has('cps')) parts.push(`${_previewFiles.cps} · CPs de ${Object.keys(CP_CENTROS || {}).length} centros`);
     document.getElementById('previewBannerFile').textContent = parts.join(' + ');
   }
 
@@ -2492,6 +2678,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!_pendingCsvData) return;
     const newData = _pendingCsvData, fileName = _pendingCsvFile, kind = _pendingCsvKind;
     closeModalAndReset();
+    if (kind === 'cps') {
+      if (!_previewKinds.has('cps')) _savedCps = { data: CP_CENTROS, meta: CP_CENTROS_META }; // lo guardado
+      applyCpsLocally(newData.cps, newData.meta);
+      setPreviewKind('cps', true, fileName);
+      showToast(`👁 CPs por centro cargados sin guardar: ${Object.keys(newData.cps).length} centros`);
+      return;
+    }
     if (kind === 'centros') {
       if (!_previewKinds.has('centros')) _savedCentros = { list: COLMENAS, meta: CENTROS_META }; // lo guardado
       applyCentrosLocally(newData.centros, newData.meta);
@@ -2509,6 +2702,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!_pendingCsvData) return;
     const newData = _pendingCsvData, kind = _pendingCsvKind;
     closeModalAndReset();
+    if (kind === 'cps') {
+      setPreviewKind('cps', false);
+      _savedCps = null;
+      applyCpsLocally(newData.cps, newData.meta);
+      await persistCps(newData.cps, newData.meta);
+      return;
+    }
     if (kind === 'centros') {
       applyCentrosLocally(newData.centros, newData.meta);
       setPreviewKind('centros', false);
@@ -2525,8 +2725,11 @@ document.addEventListener('DOMContentLoaded', () => {
   window.savePreview = async function() {
     if (!_previewMode) return;
     const kinds = new Set(_previewKinds);
-    setPreviewKind('areas', false); setPreviewKind('centros', false);
-    if (kinds.has('centros')) { _savedCentros = null; await persistCentros(COLMENAS, CENTROS_META); }
+    setPreviewKind('areas', false); setPreviewKind('centros', false); setPreviewKind('cps', false);
+    if (kinds.has('centros')) _savedCentros = null;
+    if (kinds.has('cps')) _savedCps = null;
+    if (kinds.has('centros')) await persistCentros(COLMENAS, CENTROS_META);
+    if (kinds.has('cps')) await persistCps(CP_CENTROS, CP_CENTROS_META);
     if (kinds.has('areas')) { _savedScenarios = null; await saveData(JSON.parse(JSON.stringify(ALL_SCENARIOS))); }
   };
   // Descartar la previsualización y volver a los datos guardados
@@ -2537,13 +2740,18 @@ document.addEventListener('DOMContentLoaded', () => {
       setPreviewKind('centros', false);
       applyCentrosLocally(sc.list, sc.meta);
     }
+    if (_previewKinds.has('cps') && _savedCps) {
+      const sc = _savedCps; _savedCps = null;
+      setPreviewKind('cps', false);
+      applyCpsLocally(sc.data, sc.meta);
+    }
     if (_previewKinds.has('areas')) {
       const saved = _savedScenarios || {};
       _savedScenarios = null;
       setPreviewKind('areas', false);
       applyDataLocally(saved);
     }
-    setPreviewKind('areas', false); setPreviewKind('centros', false);
+    setPreviewKind('areas', false); setPreviewKind('centros', false); setPreviewKind('cps', false);
     showToast('↩ Datos guardados restaurados');
   };
 });
@@ -2943,8 +3151,9 @@ function findSearchResults(query) {
   const areaResults = [];
   const today = new Date(); today.setHours(0,0,0,0);
 
-  Object.entries(ALL_SCENARIOS).forEach(([centro, scenarios]) => {
+  Object.keys(ALL_SCENARIOS).forEach(centro => {
     if (!isOpenToday(centro)) return; // aún sin abrir: no aparece
+    const scenarios = isNumeric ? scenariosOf(centro) : ALL_SCENARIOS[centro];
     if (isNumeric) {
       // Recopilar todos los escenarios donde aparece cada CP que coincide
       const cpMatches = {}; // cp -> [{ scIdx, sc }]
@@ -3070,7 +3279,7 @@ function renderSearchItem(r, globalIdx, q) {
       <span class="cp-search-dot" style="background:${color}"></span>
       <span class="cp-search-label">${highlightMatch(r.cp, q)}</span>
       <span class="cp-search-pill cp">CP</span>
-      <span class="cp-search-area-badge">${r.area}</span>
+      ${r.area !== r.centro ? `<span class="cp-search-area-badge">${r.area}</span>` : ''}
       <span class="cp-search-sub" style="margin-left:auto"><strong>${r.centro.toUpperCase()}</strong> · ${r.scLabel}</span>
       ${r.isToday ? '<span class="cp-search-today">HOY</span>' : ''}
     `;
@@ -3116,6 +3325,8 @@ async function selectSearchResult(idx) {
   if (!r) return;
 
   closeOmni();
+  // Las áreas se ven en la vista Áreas: se cambia antes de elegir su escenario
+  if (r.type === 'area' && activeTab !== 'mapareas') setViewMode('areas');
 
   // Navigate to the right centro + scenario.
   // Si el centro ya forma parte de una selección múltiple se mantiene la
