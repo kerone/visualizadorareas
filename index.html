@@ -1573,7 +1573,6 @@ function renderSidebar() {
         if (active) {
           if (x.gain.length) detailHtml += `<div class="sc-detail">Gana</div><div class="sc-cp-diff">${x.gain.map(gainTag).join('')}</div>`;
           if (x.lose.length) detailHtml += `<div class="sc-detail">Pierde</div><div class="sc-cp-diff">${x.lose.map(loseTag).join('')}</div>`;
-          if (x.model) detailHtml += `<div class="sc-detail">Cambio de modelo</div><div class="sc-cp-diff"><span class="cp-tag model">${mTxt(x.model[0])} → ${mTxt(x.model[1])}</span></div>`;
         }
       } else {
         const row = c => { const x = ch[c]; return `<div class="sc-centro-row"><span class="sc-centro-dot" style="background:${CENTRO_COLORS[c]}"></span><b>${U(c)}</b>`
